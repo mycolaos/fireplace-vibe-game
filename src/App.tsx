@@ -807,6 +807,28 @@ export default function App() {
       </div>
 
       {/* --- Controls Info --- */}
+      <div className="absolute top-60 right-6 flex flex-col items-center gap-4 pointer-events-none">        
+        {!uiState.gameOver && (
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex gap-8 opacity-40 hover:opacity-100 transition-opacity">
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-8 h-8 rounded-lg border-2 border-white/20 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                </div>
+                <span className="text-[9px] text-white uppercase font-bold tracking-widest">Stick</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-8 h-8 rounded-lg border-2 border-white/20 flex items-center justify-center group overflow-hidden">
+                  <div className="w-4 h-full bg-white/20" />
+                </div>
+                <span className="text-[9px] text-white uppercase font-bold tracking-widest">Hold for Log</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* --- Controls--- */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 pointer-events-none">
         {isPressing && (
           <div className="flex flex-col items-center gap-2 mb-4">
@@ -830,21 +852,6 @@ export default function App() {
                 <span className="text-[9px] text-white/40 uppercase font-bold">[Spacebar]</span>
               </div>
             </button>
-
-            <div className="flex gap-8 opacity-40 hover:opacity-100 transition-opacity">
-              <div className="flex flex-col items-center gap-1">
-                <div className="w-8 h-8 rounded-lg border-2 border-white/20 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                </div>
-                <span className="text-[9px] text-white uppercase font-bold tracking-widest">Stick</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="w-8 h-8 rounded-lg border-2 border-white/20 flex items-center justify-center group overflow-hidden">
-                  <div className="w-4 h-full bg-white/20" />
-                </div>
-                <span className="text-[9px] text-white uppercase font-bold tracking-widest">Hold for Log</span>
-              </div>
-            </div>
           </div>
         )}
       </div>
