@@ -39,8 +39,8 @@ export const MOON_POSITION_CONFIG = {
 };
 
 export const WEATHER_CONFIG = {
-  CLEAR: { fuelDecay: 1.0, tempStability: 1.0, visibility: 1.0 },
-  WINDY: { fuelDecay: 1.4, tempStability: 0.8, visibility: 0.9 },
-  RAINY: { fuelDecay: 1.8, tempStability: 0.6, visibility: 0.7 },
-  SNOWY: { fuelDecay: 2.2, tempStability: 0.4, visibility: 0.6 },
+  CLEAR: { fuelDecay: 1.0, tempStability: 1.0, visibility: 1.0, durationMult: 1.5 },
+  WINDY: { fuelDecay: 1.4, tempStability: 0.8, visibility: 0.9, durationMult: 1.0 },
+  RAINY: { fuelDecay: 1.8, tempStability: 0.6, visibility: 0.7, durationMult: 0.8 },
+  SNOWY: { fuelDecay: 2.2, tempStability: 0.4, visibility: 0.6, durationMult: 1.2 },
 };

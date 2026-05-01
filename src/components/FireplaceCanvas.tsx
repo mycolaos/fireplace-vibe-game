@@ -110,7 +110,8 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
           } while (nextWeather === state.current.weather);
           
           state.current.weather = nextWeather;
-          const randomDuration = WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION);
+          const config = WEATHER_CONFIG[nextWeather];
+          const randomDuration = (WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION)) * config.durationMult;
           state.current.nextWeatherTime = time + randomDuration;
         }
 

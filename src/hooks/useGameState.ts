@@ -16,11 +16,13 @@ import {
   DIFFICULTY_INCREMENT,
   WEATHER_MIN_DURATION,
   WEATHER_MAX_DURATION,
+  WEATHER_CONFIG,
   DEFAULT_CYCLE_START
 } from '../constants';
 import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree, WeatherType } from '../types';
 
 export function useGameState() {
+  const initialWeather: WeatherType = 'CLEAR';
   const state = useRef({
     intensity: INITIAL_INTENSITY,
     oxygen: 100,
@@ -44,8 +46,8 @@ export function useGameState() {
     currentEvent: 'NONE' as GameEvent,
     eventEndTime: 0,
     nextEventTime: performance.now() + 8000,
-    weather: 'CLEAR' as WeatherType,
-    nextWeatherTime: performance.now() + WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION),
+    weather: initialWeather,
+    nextWeatherTime: performance.now() + (WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION)) * WEATHER_CONFIG[initialWeather].durationMult,
     cycleProgress: DEFAULT_CYCLE_START,
     initialCycle: DEFAULT_CYCLE_START,
   });
@@ -104,7 +106,7 @@ export function useGameState() {
       eventEndTime: 0,
       nextEventTime: now + 8000,
       weather: 'CLEAR',
-      nextWeatherTime: now + WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION),
+      nextWeatherTime: now + (WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION)) * WEATHER_CONFIG['CLEAR'].durationMult,
       cycleProgress: initialCycle,
       initialCycle: initialCycle,
     };
