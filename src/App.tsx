@@ -314,7 +314,7 @@ export default function App() {
         x: Math.random(),
         y: 0.5 + Math.random() * 0.4,
         phase: Math.random() * Math.PI * 2,
-        speed: 0.001 + Math.random() * 0.002,
+        speed: 0.0001 + Math.random() * 0.001,
         offset: Math.random() * 100
       });
     }
@@ -408,16 +408,23 @@ export default function App() {
       // --- Rendering ---
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
+      const horizonY = canvas.height * 0.55;
       const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2 + 80;
+      const centerY = canvas.height * 0.75;
 
       // 1. Sky Gradient (Deep Midnight)
-      const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, horizonY);
       skyGradient.addColorStop(0, '#020205');
-      skyGradient.addColorStop(0.5, '#0a0a1a');
-      skyGradient.addColorStop(1, '#1a0f1f');
+      skyGradient.addColorStop(1, '#0a0a1a');
       ctx.fillStyle = skyGradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvas.width, horizonY);
+
+      // 1.2 Ground (Dark Desert/Floor)
+      const groundGradient = ctx.createLinearGradient(0, horizonY, 0, canvas.height);
+      groundGradient.addColorStop(0, '#0a0714'); // Closer to horizon
+      groundGradient.addColorStop(1, '#05020a'); // Towards viewer
+      ctx.fillStyle = groundGradient;
+      ctx.fillRect(0, horizonY, canvas.width, canvas.height - horizonY);
 
       // 1.5 Moon
       const moonX = canvas.width * 0.15;
@@ -442,63 +449,66 @@ export default function App() {
         const twinkle = Math.sin(time * 0.002 + s.phase) * 0.5 + 0.5;
         ctx.globalAlpha = 0.3 + twinkle * 0.7;
         ctx.beginPath();
-        ctx.arc(s.x * canvas.width, s.y * canvas.height, s.size, 0, Math.PI * 2);
+        // Keep stars above horizon
+        ctx.arc(s.x * canvas.width, s.y * horizonY * 0.9, s.size, 0, Math.PI * 2);
         ctx.fill();
       });
       ctx.globalAlpha = 1.0;
 
-      // 3. Distant Dunes Silhouette
+      // 3. Distant Dunes Silhouette (sitting on horizon)
       const drawDune = (height: number, color: string, offset: number) => {
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.moveTo(0, canvas.height);
+        ctx.moveTo(0, horizonY + 20);
         for(let x = 0; x <= canvas.width; x += 10) {
-          const y = canvas.height - height + Math.sin(x * 0.005 + offset) * 20;
+          const y = horizonY - height + Math.sin(x * 0.005 + offset) * 20;
           ctx.lineTo(x, y);
         }
-        ctx.lineTo(canvas.width, canvas.height);
+        ctx.lineTo(canvas.width, horizonY + 20);
         ctx.fill();
       };
-      drawDune(120, '#0a0514', 1); // Furthest
+      drawDune(60, '#0a0514', 1); // Furthest
+      drawDune(30, '#0d071a', 5);  // Mid
       
-      // 3.5 Distant Cabin
+      // 3.5 Distant Cabin (drawn after dunes to be visible)
       const cabinX = canvas.width * 0.8;
-      const cabinY = canvas.height - 110 + Math.sin(cabinX * 0.005 + 1) * 20;
+      const cabinY = horizonY - 15 + Math.sin(cabinX * 0.005 + 1) * 5;
       ctx.fillStyle = '#05020a';
       ctx.beginPath();
-      ctx.moveTo(cabinX - 15, cabinY);
-      ctx.lineTo(cabinX - 15, cabinY - 12);
-      ctx.lineTo(cabinX, cabinY - 20);
-      ctx.lineTo(cabinX + 15, cabinY - 12);
-      ctx.lineTo(cabinX + 15, cabinY);
+      // Slightly larger cabin
+      ctx.moveTo(cabinX - 20, cabinY);
+      ctx.lineTo(cabinX - 20, cabinY - 15);
+      ctx.lineTo(cabinX, cabinY - 25);
+      ctx.lineTo(cabinX + 20, cabinY - 15);
+      ctx.lineTo(cabinX + 20, cabinY);
       ctx.closePath();
       ctx.fill();
       
       // Chimney
-      ctx.fillRect(cabinX + 5, cabinY - 18, 4, -6);
+      ctx.fillRect(cabinX + 8, cabinY - 22, 5, -8);
       // Chimney Smoke
       const smokeFlick = (time * 0.001) % 1;
-      ctx.fillStyle = `rgba(255, 255, 255, ${0.1 * (1 - smokeFlick)})`;
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.15 * (1 - smokeFlick)})`;
       ctx.beginPath();
-      ctx.arc(cabinX + 7 + Math.sin(time * 0.005) * 5, cabinY - 24 - smokeFlick * 20, 3 + smokeFlick * 5, 0, Math.PI * 2);
+      ctx.arc(cabinX + 10 + Math.sin(time * 0.005) * 5, cabinY - 30 - smokeFlick * 20, 4 + smokeFlick * 6, 0, Math.PI * 2);
       ctx.fill();
 
       // Flickering window
       const flick = Math.sin(time * 0.01) * 0.2 + 0.8;
-      ctx.fillStyle = `rgba(255, 200, 50, ${flick * 0.6})`;
-      ctx.fillRect(cabinX - 4, cabinY - 8, 8, 6);
-      ctx.shadowBlur = 10 * flick;
+      ctx.fillStyle = `rgba(255, 200, 50, ${flick * 0.8})`;
+      ctx.fillRect(cabinX - 5, cabinY - 10, 10, 8);
+      ctx.shadowBlur = 15 * flick;
       ctx.shadowColor = 'orange';
-      ctx.strokeRect(cabinX - 4, cabinY - 8, 8, 6);
+      ctx.strokeRect(cabinX - 5, cabinY - 10, 10, 8);
       ctx.shadowBlur = 0;
 
-      drawDune(80, '#0d071a', 5);  // Mid
-
-      // 3.6 Swaying Trees
+      // 3.6 Swaying Trees (placed near the horizon line)
       state.current.trees.forEach(t => {
           const sway = Math.sin(time * 0.001 + t.phase) * 0.05;
           ctx.save();
-          ctx.translate(t.x * canvas.width, t.y * canvas.height);
+          // Adjust t.y to be relative to horizon
+          const treeY = horizonY + (t.y - 0.75) * 100;
+          ctx.translate(t.x * canvas.width, treeY);
           ctx.rotate(sway);
           ctx.fillStyle = '#05020a';
           // Trunk
@@ -516,21 +526,18 @@ export default function App() {
           ctx.restore();
       });
 
-      // 4. Ground / Near Dune
-      ctx.fillStyle = '#0f0a1c';
-      ctx.beginPath();
-      ctx.ellipse(centerX, centerY + 20, 600, 150, 0, 0, Math.PI * 2);
-      ctx.fill();
-
       // 5. Fire Glow (Enhanced and reactive to ground)
       const intensityNorm = state.current.intensity / 100;
       
-      // Ground-specific illumination
-      const groundGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 200 * intensityNorm);
-      groundGlow.addColorStop(0, `rgba(255, 100, 0, ${0.15 * intensityNorm})`);
+      // Ground-specific illumination (Local to fireplace)
+      const groundGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 300 * intensityNorm);
+      groundGlow.addColorStop(0, `rgba(255, 80, 0, ${0.2 * intensityNorm})`);
+      groundGlow.addColorStop(0.5, `rgba(150, 40, 0, ${0.1 * intensityNorm})`);
       groundGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = groundGlow;
-      ctx.fillRect(0, centerY - 50, canvas.width, 200);
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY, 300 * intensityNorm, 100 * intensityNorm, 0, 0, Math.PI * 2);
+      ctx.fill();
 
       const bgGrade = ctx.createRadialGradient(
         centerX, centerY, 
@@ -627,8 +634,9 @@ export default function App() {
   const checkCabinHit = (x: number, y: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return false;
+    const horizonY = canvas.height * 0.55;
     const cabinX = canvas.width * 0.8;
-    const cabinY = canvas.height - 110 + Math.sin(cabinX * 0.005 + 1) * 20;
+    const cabinY = horizonY - 15 + Math.sin(cabinX * 0.005 + 1) * 5;
     const dist = Math.sqrt((x - cabinX) ** 2 + (y - cabinY) ** 2);
     return dist < CABIN_HIT_RADIUS;
   };
@@ -680,7 +688,7 @@ export default function App() {
 
     // Center spawn since logic focuses on main fire area
     const spawnX = canvas.width / 2;
-    const spawnY = canvas.height / 2 + 80;
+    const spawnY = canvas.height * 0.75;
 
     if (duration > 600) {
       handleInteraction('log', spawnX, spawnY);
@@ -725,10 +733,11 @@ export default function App() {
             initial={{ opacity: 0, y: 10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.9 }}
-            className="absolute z-50 pointer-events-none backdrop-blur-md text-red-600 text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.4)]"
+            className="absolute z-50 pointer-events-none backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded bg-black/40 border border-white/10 shadow-lg whitespace-nowrap"
             style={{ 
-              left: (canvasRef.current?.width || 0) * 0.8, 
-              top: (canvasRef.current?.height || 0) * 0.55 // Positioned above distant cabin
+              left: '80%', 
+              top: '50%',
+              transform: 'translate(-50%, -100%)'
             }}
           >
             Vibe portal
