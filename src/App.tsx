@@ -758,7 +758,7 @@ export default function App() {
       {/** Oxygen */}
       <div className="absolute bottom-10 left-6 right-6 flex gap-4 pointer-events-none">
         <div className="w-full flex flex-col gap-2">
-           <div className="flex items-center px-1 text-[10px]">
+           <div className="flex gap-1 items-center px-1 text-[10px]">
              <span className="uppercase font-bold text-sky-400/60 tracking-tighter">Oxygen</span>
              <Wind className="w-3 h-3 text-sky-400" />
              {uiState.smoke > 20 &&  <span className="ml-auto text-gray-300">Smoke Level: {Math.floor(uiState.smoke)}%</span>}
