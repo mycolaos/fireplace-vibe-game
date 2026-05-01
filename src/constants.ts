@@ -17,6 +17,14 @@ export const STICK_REGEN_TIME = 3000; // 3s per stick
 export const LOG_REGEN_TIME = 8000; // 8s per log
 
 export const WEATHER_CHANGE_INTERVAL = 60 * 1000; // 60s
+export const DAY_CYCLE_DURATION = 180 * 1000; // 3 minutes for a full cycle
+
+export const SKY_COLORS = {
+  DUSK: { top: '#1a0b2e', bottom: '#e96443' },
+  NIGHT: { top: '#020205', bottom: '#0a0a1a' },
+  DAWN: { top: '#7474bf', bottom: '#348ac7' }
+};
+
 export const WEATHER_CONFIG = {
   CLEAR: { fuelDecay: 1.0, tempStability: 1.0, visibility: 1.0 },
   WINDY: { fuelDecay: 1.4, tempStability: 0.8, visibility: 0.9 },

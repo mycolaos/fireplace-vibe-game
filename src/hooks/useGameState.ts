@@ -43,6 +43,7 @@ export function useGameState() {
     nextEventTime: performance.now() + 8000,
     weather: 'CLEAR' as WeatherType,
     nextWeatherTime: performance.now() + 20000,
+    cycleProgress: 0,
   });
 
   const [uiState, setUiState] = useState<UIState>({
@@ -56,6 +57,7 @@ export function useGameState() {
     sticks: MAX_STICKS,
     logs: MAX_LOGS,
     currentEvent: 'NONE',
+    cycleProgress: 0,
   });
 
   const updateUI = useCallback(() => {
@@ -70,6 +72,7 @@ export function useGameState() {
       sticks: state.current.sticks,
       logs: state.current.logs,
       currentEvent: state.current.currentEvent,
+      cycleProgress: state.current.cycleProgress,
     });
   }, []);
 
@@ -98,6 +101,7 @@ export function useGameState() {
       nextEventTime: now + 8000,
       weather: 'CLEAR',
       nextWeatherTime: now + 20000,
+      cycleProgress: 0,
     };
     updateUI();
   }, [updateUI]);

@@ -4,27 +4,79 @@
  */
 
 import { Wood, Star, Firefly, Tree } from '../types';
+import { SKY_COLORS } from '../constants';
 
-export const drawSky = (ctx: CanvasRenderingContext2D, width: number, horizonY: number) => {
+const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 0, g: 0, b: 0 };
+};
+
+const interpolateColor = (color1: string, color2: string, factor: number) => {
+  const rgb1 = hexToRgb(color1);
+  const rgb2 = hexToRgb(color2);
+  const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * factor);
+  const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * factor);
+  const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * factor);
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
+export const drawSky = (ctx: CanvasRenderingContext2D, width: number, horizonY: number, cycle: number) => {
+  let topColor, bottomColor;
+  
+  // Cycle: 0 (Dusk) -> 0.4 (Night) -> 0.7 (Dawn) -> 1.0 (Dusk)
+  if (cycle < 0.4) {
+    const f = cycle / 0.4;
+    topColor = interpolateColor(SKY_COLORS.DUSK.top, SKY_COLORS.NIGHT.top, f);
+    bottomColor = interpolateColor(SKY_COLORS.DUSK.bottom, SKY_COLORS.NIGHT.bottom, f);
+  } else if (cycle < 0.7) {
+    const f = (cycle - 0.4) / 0.3;
+    topColor = interpolateColor(SKY_COLORS.NIGHT.top, SKY_COLORS.DAWN.top, f);
+    bottomColor = interpolateColor(SKY_COLORS.NIGHT.bottom, SKY_COLORS.DAWN.bottom, f);
+  } else {
+    const f = (cycle - 0.7) / 0.3;
+    topColor = interpolateColor(SKY_COLORS.DAWN.top, SKY_COLORS.DUSK.top, f);
+    bottomColor = interpolateColor(SKY_COLORS.DAWN.bottom, SKY_COLORS.DUSK.bottom, f);
+  }
+
   const skyGradient = ctx.createLinearGradient(0, 0, 0, horizonY);
-  skyGradient.addColorStop(0, '#020205');
-  skyGradient.addColorStop(1, '#0a0a1a');
+  skyGradient.addColorStop(0, topColor);
+  skyGradient.addColorStop(1, bottomColor);
   ctx.fillStyle = skyGradient;
   ctx.fillRect(0, 0, width, horizonY);
 };
 
-export const drawGround = (ctx: CanvasRenderingContext2D, width: number, height: number, horizonY: number) => {
+export const drawGround = (ctx: CanvasRenderingContext2D, width: number, height: number, horizonY: number, cycle: number) => {
+  // Ground also gets darker/lighter with cycle
+  const brightness = cycle > 0.4 && cycle < 0.7 ? 0.05 : 0.15 * (1 - Math.abs(cycle - 0.5) * 2);
   const groundGradient = ctx.createLinearGradient(0, horizonY, 0, height);
-  groundGradient.addColorStop(0, '#0a0714');
-  groundGradient.addColorStop(1, '#05020a');
+  
+  // Darken ground relative to sky
+  const color1 = cycle > 0.3 && cycle < 0.8 ? '#0a0714' : '#1a1724';
+  const color2 = cycle > 0.3 && cycle < 0.8 ? '#05020a' : '#0a0a1a';
+  
+  groundGradient.addColorStop(0, color1);
+  groundGradient.addColorStop(1, color2);
   ctx.fillStyle = groundGradient;
   ctx.fillRect(0, horizonY, width, height - horizonY);
 };
 
-export const drawMoon = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-  const moonX = width * 0.20;
-  const moonY = height * 0.20;
+export const drawMoon = (ctx: CanvasRenderingContext2D, width: number, height: number, cycle: number) => {
+  // Moon is visible mostly at night (0.2 to 0.8)
+  let alpha = 0;
+  if (cycle > 0.2 && cycle < 0.8) {
+    alpha = Math.sin((cycle - 0.2) / 0.6 * Math.PI);
+  }
+  if (alpha <= 0) return;
+
+  const moonX = width * (0.2 + (cycle * 0.6)); // Moon moves across the sky
+  const moonY = height * (0.25 - Math.sin(cycle * Math.PI) * 0.15);
+  
   ctx.save();
+  ctx.globalAlpha = alpha;
   ctx.shadowBlur = 40;
   ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
   ctx.fillStyle = '#fefce8';
@@ -38,11 +90,18 @@ export const drawMoon = (ctx: CanvasRenderingContext2D, width: number, height: n
   ctx.restore();
 };
 
-export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: number, horizonY: number, time: number) => {
+export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: number, horizonY: number, time: number, cycle: number) => {
+  // Stars visible at night
+  let alphaMult = 0;
+  if (cycle > 0.1 && cycle < 0.9) {
+    alphaMult = Math.sin((cycle - 0.1) / 0.8 * Math.PI);
+  }
+  if (alphaMult <= 0) return;
+
   ctx.fillStyle = 'white';
   stars.forEach(s => {
     const twinkle = Math.sin(time * 0.002 + s.phase) * 0.5 + 0.5;
-    ctx.globalAlpha = 0.3 + twinkle * 0.7;
+    ctx.globalAlpha = (0.3 + twinkle * 0.7) * alphaMult;
     ctx.beginPath();
     ctx.arc(s.x * width, s.y * horizonY * 0.9, s.size, 0, Math.PI * 2);
     ctx.fill();

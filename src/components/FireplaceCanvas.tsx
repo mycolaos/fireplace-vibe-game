@@ -15,7 +15,8 @@ import {
   LOG_REGEN_TIME,
   DIFFICULTY_INCREMENT,
   WEATHER_CHANGE_INTERVAL,
-  WEATHER_CONFIG
+  WEATHER_CONFIG,
+  DAY_CYCLE_DURATION
 } from '../constants';
 import { GameEvent, UIState, Star, Firefly, Tree, WeatherType } from '../types';
 import { fireAudio } from '../services/audioService';
@@ -94,6 +95,10 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         // Intensity decay gets faster as time goes on (difficulty scaling)
         const weatherMod = WEATHER_CONFIG[state.current.weather].fuelDecay;
         state.current.decayRate = (INTENSITY_DECAY_BASE + Math.floor(totalTime / 10) * DIFFICULTY_INCREMENT) * weatherMod;
+
+        // --- 1.5 DAY CYCLE UPDATE ---
+        const cycleDurationSeconds = DAY_CYCLE_DURATION / 1000;
+        state.current.cycleProgress = (totalTime % cycleDurationSeconds) / cycleDurationSeconds;
 
         // --- 2. WEATHER SYSTEM ---
         if (time > state.current.nextWeatherTime) {
@@ -197,11 +202,11 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
       const centerY = canvas.height * 0.75;
 
       // Layered Drawing
-      renderer.drawSky(ctx, canvas.width, horizonY);
-      renderer.drawGround(ctx, canvas.width, canvas.height, horizonY);
-      renderer.drawMoon(ctx, canvas.width, canvas.height);
+      renderer.drawSky(ctx, canvas.width, horizonY, state.current.cycleProgress);
+      renderer.drawGround(ctx, canvas.width, canvas.height, horizonY, state.current.cycleProgress);
+      renderer.drawMoon(ctx, canvas.width, canvas.height, state.current.cycleProgress);
       if (state.current.weather === 'CLEAR' || state.current.weather === 'WINDY') {
-        renderer.drawStars(ctx, state.current.stars, canvas.width, horizonY, time);
+        renderer.drawStars(ctx, state.current.stars, canvas.width, horizonY, time, state.current.cycleProgress);
       }
       renderer.drawDunes(ctx, canvas.width, horizonY);
       renderer.drawCabin(ctx, canvas.width, horizonY, time);

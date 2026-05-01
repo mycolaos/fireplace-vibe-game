@@ -62,4 +62,5 @@ export interface UIState {
   sticks: number;
   logs: number;
   currentEvent: GameEvent;
+  cycleProgress: number; // 0 to 1
 }
