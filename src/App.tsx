@@ -14,6 +14,7 @@ const INTENSITY_DECAY_BASE = 0.8;
 const SMOKE_DECAY = 0.5;
 const DIFFICULTY_INTERVAL = 10000; // 10 seconds
 const DIFFICULTY_INCREMENT = 0.15;
+const CABIN_HIT_RADIUS = 45;
 
 // --- Audio Class ---
 class FireAudio {
@@ -145,6 +146,8 @@ export default function App() {
     particles: [] as Particle[],
     woods: [] as Wood[],
     stars: [] as { x: number, y: number, size: number, phase: number }[],
+    fireflies: [] as { x: number, y: number, phase: number, speed: number, offset: number }[],
+    trees: [] as { x: number, y: number, height: number, phase: number }[],
     gameOver: false,
     startTime: 0,
     nextWindChange: 0,
@@ -193,6 +196,7 @@ export default function App() {
 
   const restart = () => {
     state.current = {
+      ...state.current,
       intensity: INITIAL_INTENSITY,
       oxygen: 100,
       smoke: 0,
@@ -201,7 +205,6 @@ export default function App() {
       lastTick: performance.now(),
       particles: [],
       woods: [],
-      stars: state.current.stars,
       gameOver: false,
       startTime: performance.now(),
       nextWindChange: performance.now() + 5000,
@@ -303,6 +306,31 @@ export default function App() {
       });
     }
     state.current.stars = newStars;
+    
+    // Initialize Fireflies
+    const fireflies = [];
+    for (let i = 0; i < 20; i++) {
+      fireflies.push({
+        x: Math.random(),
+        y: 0.5 + Math.random() * 0.4,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.001 + Math.random() * 0.002,
+        offset: Math.random() * 100
+      });
+    }
+    state.current.fireflies = fireflies;
+
+    // Initialize Trees
+    const trees = [];
+    for (let i = 0; i < 8; i++) {
+        trees.push({
+            x: 0.1 + Math.random() * 0.8,
+            y: 0.75 + Math.random() * 0.1,
+            height: 40 + Math.random() * 60,
+            phase: Math.random() * Math.PI * 2
+        });
+    }
+    state.current.trees = trees;
 
     let rafId: number;
 
@@ -391,6 +419,23 @@ export default function App() {
       ctx.fillStyle = skyGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      // 1.5 Moon
+      const moonX = canvas.width * 0.15;
+      const moonY = canvas.height * 0.15;
+      ctx.save();
+      ctx.shadowBlur = 40;
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+      ctx.fillStyle = '#fefce8';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 30, 0, Math.PI * 2);
+      ctx.fill();
+      // Moon crater/shadow effect
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(moonX + 10, moonY - 5, 28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
       // 2. Stars (with twinkle)
       ctx.fillStyle = 'white';
       state.current.stars.forEach(s => {
@@ -401,32 +446,6 @@ export default function App() {
         ctx.fill();
       });
       ctx.globalAlpha = 1.0;
-
-      // 2.5 Portal Ring (Purple Ring in the sky)
-      const portalX = canvas.width * 0.75;
-      const portalY = canvas.height * 0.2;
-      const portalRadius = 35;
-      
-      ctx.save();
-      // Outer Glow
-      ctx.shadowBlur = 25;
-      ctx.shadowColor = '#a855f7';
-      ctx.strokeStyle = '#d8b4fe';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([8, 12]);
-      ctx.lineDashOffset = -time * 0.05;
-      
-      ctx.beginPath();
-      ctx.arc(portalX, portalY, portalRadius + Math.sin(time * 0.003) * 2, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Inner subtle glow
-      const portalGlow = ctx.createRadialGradient(portalX, portalY, 0, portalX, portalY, portalRadius);
-      portalGlow.addColorStop(0, 'rgba(168, 85, 247, 0.2)');
-      portalGlow.addColorStop(1, 'rgba(168, 85, 247, 0)');
-      ctx.fillStyle = portalGlow;
-      ctx.fill();
-      ctx.restore();
 
       // 3. Distant Dunes Silhouette
       const drawDune = (height: number, color: string, offset: number) => {
@@ -441,7 +460,61 @@ export default function App() {
         ctx.fill();
       };
       drawDune(120, '#0a0514', 1); // Furthest
+      
+      // 3.5 Distant Cabin
+      const cabinX = canvas.width * 0.8;
+      const cabinY = canvas.height - 110 + Math.sin(cabinX * 0.005 + 1) * 20;
+      ctx.fillStyle = '#05020a';
+      ctx.beginPath();
+      ctx.moveTo(cabinX - 15, cabinY);
+      ctx.lineTo(cabinX - 15, cabinY - 12);
+      ctx.lineTo(cabinX, cabinY - 20);
+      ctx.lineTo(cabinX + 15, cabinY - 12);
+      ctx.lineTo(cabinX + 15, cabinY);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Chimney
+      ctx.fillRect(cabinX + 5, cabinY - 18, 4, -6);
+      // Chimney Smoke
+      const smokeFlick = (time * 0.001) % 1;
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.1 * (1 - smokeFlick)})`;
+      ctx.beginPath();
+      ctx.arc(cabinX + 7 + Math.sin(time * 0.005) * 5, cabinY - 24 - smokeFlick * 20, 3 + smokeFlick * 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Flickering window
+      const flick = Math.sin(time * 0.01) * 0.2 + 0.8;
+      ctx.fillStyle = `rgba(255, 200, 50, ${flick * 0.6})`;
+      ctx.fillRect(cabinX - 4, cabinY - 8, 8, 6);
+      ctx.shadowBlur = 10 * flick;
+      ctx.shadowColor = 'orange';
+      ctx.strokeRect(cabinX - 4, cabinY - 8, 8, 6);
+      ctx.shadowBlur = 0;
+
       drawDune(80, '#0d071a', 5);  // Mid
+
+      // 3.6 Swaying Trees
+      state.current.trees.forEach(t => {
+          const sway = Math.sin(time * 0.001 + t.phase) * 0.05;
+          ctx.save();
+          ctx.translate(t.x * canvas.width, t.y * canvas.height);
+          ctx.rotate(sway);
+          ctx.fillStyle = '#05020a';
+          // Trunk
+          ctx.fillRect(-2, 0, 4, -t.height);
+          // Leaves (Multi-layered pine)
+          for (let i = 0; i < 3; i++) {
+              ctx.beginPath();
+              const levelY = -t.height * (0.4 + i * 0.3);
+              const levelWidth = 15 - i * 4;
+              ctx.moveTo(0, levelY - 15);
+              ctx.lineTo(-levelWidth, levelY + 10);
+              ctx.lineTo(levelWidth, levelY + 10);
+              ctx.fill();
+          }
+          ctx.restore();
+      });
 
       // 4. Ground / Near Dune
       ctx.fillStyle = '#0f0a1c';
@@ -449,8 +522,16 @@ export default function App() {
       ctx.ellipse(centerX, centerY + 20, 600, 150, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 5. Fire Glow (Illuminating the landscape)
+      // 5. Fire Glow (Enhanced and reactive to ground)
       const intensityNorm = state.current.intensity / 100;
+      
+      // Ground-specific illumination
+      const groundGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 200 * intensityNorm);
+      groundGlow.addColorStop(0, `rgba(255, 100, 0, ${0.15 * intensityNorm})`);
+      groundGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = groundGlow;
+      ctx.fillRect(0, centerY - 50, canvas.width, 200);
+
       const bgGrade = ctx.createRadialGradient(
         centerX, centerY, 
         10, 
@@ -466,6 +547,21 @@ export default function App() {
       ctx.fillStyle = bgGrade;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.globalCompositeOperation = 'source-over';
+
+      // 5.5 Fireflies
+      ctx.save();
+      ctx.shadowBlur = 8;
+      state.current.fireflies.forEach(f => {
+          const x = (f.x * canvas.width) + Math.sin(time * f.speed + f.phase) * 30;
+          const y = (f.y * canvas.height) + Math.cos(time * f.speed + f.phase) * 30;
+          const flick = Math.sin(time * 0.005 + f.offset) * 0.5 + 0.5;
+          ctx.shadowColor = '#d4d4d8';
+          ctx.fillStyle = `rgba(187, 247, 208, ${flick * 0.8})`;
+          ctx.beginPath();
+          ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+      });
+      ctx.restore();
 
       // Draw Wood
       state.current.woods = state.current.woods.filter(w => {
@@ -526,11 +622,54 @@ export default function App() {
     };
   }, [isMuted]);
 
+  const [hoveringCabin, setHoveringCabin] = useState(false);
+
+  const checkCabinHit = (x: number, y: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return false;
+    const cabinX = canvas.width * 0.8;
+    const cabinY = canvas.height - 110 + Math.sin(cabinX * 0.005 + 1) * 20;
+    const dist = Math.sqrt((x - cabinX) ** 2 + (y - cabinY) ** 2);
+    return dist < CABIN_HIT_RADIUS;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const hit = checkCabinHit(x, y);
+    if (hit !== hoveringCabin) {
+      setHoveringCabin(hit);
+    }
+  };
+
   const handleMouseDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (state.current.gameOver) return;
+    
+    // Check for cabin click
+    let clientX, clientY;
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (rect) {
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      if (checkCabinHit(x, y)) {
+        window.location.href = 'https://vibej.am/portal/2026';
+        return;
+      }
+    }
+
     setIsPressing(true);
     pressStartTime.current = performance.now();
-  }, []);
+  }, [hoveringCabin]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!isPressing || state.current.gameOver) return;
@@ -570,16 +709,35 @@ export default function App() {
     <div 
       id="game-root"
       ref={containerRef}
-      className="relative w-full h-screen bg-[#0a0a0f] overflow-hidden font-sans select-none touch-none cursor-crosshair"
+      className={`relative w-full h-screen bg-[#0a0a0f] overflow-hidden font-sans select-none touch-none ${hoveringCabin ? 'cursor-pointer' : 'cursor-crosshair'}`}
       onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onTouchStart={handleMouseDown}
       onTouchEnd={handleMouseUp}
     >
       <canvas ref={canvasRef} className="absolute inset-0 block" />
 
+      {/* --- Cabin Tooltip --- */}
+      <AnimatePresence>
+        {hoveringCabin && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+            className="absolute z-50 pointer-events-none backdrop-blur-md text-red-600 text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.4)]"
+            style={{ 
+              left: (canvasRef.current?.width || 0) * 0.8, 
+              top: (canvasRef.current?.height || 0) * 0.55 // Positioned above distant cabin
+            }}
+          >
+            Vibe portal
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* --- HUD --- */}
-      <div className="absolute top-6 left-6 flex flex-col gap-4 pointer-events-none">
+      <div className="absolute bottom-6 left-6 flex flex-col gap-4 pointer-events-none">
         <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 shadow-2xl">
           <TimerIcon className="w-5 h-5 text-sky-400" />
           <span className="text-2xl font-bold text-white tracking-widest font-mono">
