@@ -14,7 +14,8 @@ import {
   STICK_REGEN_TIME, 
   LOG_REGEN_TIME,
   DIFFICULTY_INCREMENT,
-  WEATHER_CHANGE_INTERVAL,
+  WEATHER_MIN_DURATION,
+  WEATHER_MAX_DURATION,
   WEATHER_CONFIG,
   DAY_CYCLE_DURATION
 } from '../constants';
@@ -103,8 +104,14 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         // --- 2. WEATHER SYSTEM ---
         if (time > state.current.nextWeatherTime) {
           const weathers: WeatherType[] = ['CLEAR', 'WINDY', 'RAINY', 'SNOWY'];
-          state.current.weather = weathers[Math.floor(Math.random() * weathers.length)];
-          state.current.nextWeatherTime = time + WEATHER_CHANGE_INTERVAL;
+          let nextWeather: WeatherType;
+          do {
+            nextWeather = weathers[Math.floor(Math.random() * weathers.length)];
+          } while (nextWeather === state.current.weather);
+          
+          state.current.weather = nextWeather;
+          const randomDuration = WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION);
+          state.current.nextWeatherTime = time + randomDuration;
         }
 
         // --- 3. RESOURCE REGENERATION ---

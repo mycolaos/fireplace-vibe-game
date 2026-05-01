@@ -13,7 +13,9 @@ import {
   MAX_LOGS, 
   STICK_REGEN_TIME, 
   LOG_REGEN_TIME,
-  DIFFICULTY_INCREMENT
+  DIFFICULTY_INCREMENT,
+  WEATHER_MIN_DURATION,
+  WEATHER_MAX_DURATION
 } from '../constants';
 import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree, WeatherType } from '../types';
 
@@ -42,7 +44,7 @@ export function useGameState() {
     eventEndTime: 0,
     nextEventTime: performance.now() + 8000,
     weather: 'CLEAR' as WeatherType,
-    nextWeatherTime: performance.now() + 20000,
+    nextWeatherTime: performance.now() + WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION),
     cycleProgress: 0,
   });
 
@@ -100,7 +102,7 @@ export function useGameState() {
       eventEndTime: 0,
       nextEventTime: now + 8000,
       weather: 'CLEAR',
-      nextWeatherTime: now + 20000,
+      nextWeatherTime: now + WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION),
       cycleProgress: 0,
     };
     updateUI();

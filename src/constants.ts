@@ -16,7 +16,8 @@ export const MAX_LOGS = 5;
 export const STICK_REGEN_TIME = 3000; // 3s per stick
 export const LOG_REGEN_TIME = 8000; // 8s per log
 
-export const WEATHER_CHANGE_INTERVAL = 60 * 1000; // 60s
+export const WEATHER_MIN_DURATION = 15000; // 15s
+export const WEATHER_MAX_DURATION = 45000; // 45s
 export const DAY_CYCLE_DURATION = 180 * 1000; // 3 minutes for a full cycle
 
 export const SKY_COLORS = {
