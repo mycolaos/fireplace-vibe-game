@@ -190,7 +190,7 @@ export default function App() {
     <div 
       id="game-root"
       ref={containerRef}
-      className={`relative w-full h-screen bg-[#0a0a0f] overflow-hidden font-sans select-none touch-none ${hoveringCabin ? 'cursor-pointer' : 'cursor-crosshair'}`}
+      className={`relative w-full h-svh bg-[#0a0a0f] overflow-hidden font-sans select-none touch-none ${hoveringCabin ? 'cursor-pointer' : 'cursor-crosshair'}`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
