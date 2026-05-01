@@ -101,11 +101,23 @@ export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: n
 
   ctx.fillStyle = 'white';
   stars.forEach(s => {
-    const twinkle = Math.sin(time * 0.002 + s.phase) * 0.5 + 0.5;
-    ctx.globalAlpha = (0.3 + twinkle * 0.7) * alphaMult;
-    ctx.beginPath();
-    ctx.arc(s.x * width, s.y * horizonY * 0.9, s.size, 0, Math.PI * 2);
-    ctx.fill();
+    // Individual threshold for this star to become visible [0, 0.95]
+    const threshold = (s.phase / (Math.PI * 2)) * 0.95;
+    
+    // Calculate individual star opacity relative to threshold
+    let starAlpha = 0;
+    if (alphaMult > threshold) {
+      // Fade in quickly (within 0.1 of alphaMult progress after threshold)
+      starAlpha = Math.min(1, (alphaMult - threshold) * 10);
+    }
+    
+    if (starAlpha > 0) {
+      const twinkle = Math.sin(time * 0.002 + s.phase) * 0.5 + 0.5;
+      ctx.globalAlpha = (0.3 + twinkle * 0.7) * starAlpha;
+      ctx.beginPath();
+      ctx.arc(s.x * width, s.y * horizonY * 0.9, s.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
   });
   ctx.globalAlpha = 1.0;
 };
