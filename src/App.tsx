@@ -180,6 +180,19 @@ export default function App() {
     currentEvent: 'NONE' as GameEvent,
   });
 
+  const [highScore, setHighScore] = useState<number>(0);
+  const highScoreRef = useRef<number>(0);
+
+  // Initialize high score from local storage
+  useEffect(() => {
+    const saved = localStorage.getItem('fireplace_highscore');
+    if (saved) {
+      const val = parseInt(saved, 10);
+      setHighScore(val);
+      highScoreRef.current = val;
+    }
+  }, []);
+
   const [isPressing, setIsPressing] = useState(false);
   const pressStartTime = useRef<number | null>(null);
   const [logCharge, setLogCharge] = useState(0);
@@ -461,6 +474,13 @@ export default function App() {
         if (state.current.intensity <= 0 || state.current.oxygen <= 0) {
           state.current.intensity = Math.max(0, state.current.intensity);
           state.current.gameOver = true;
+          
+          // Save high score
+          if (state.current.score > highScoreRef.current) {
+            highScoreRef.current = state.current.score;
+            setHighScore(state.current.score);
+            localStorage.setItem('fireplace_highscore', state.current.score.toString());
+          }
         }
 
         // Smoke Decay
@@ -1015,7 +1035,12 @@ export default function App() {
               <h2 className="text-4xl md:text-5xl font-black text-white mb-2 tracking-tighter">
                 {uiState.oxygen <= 0 ? "You Suffocated" : "The Fire Went Out"}
               </h2>
-              <p className="text-white/40 mb-10 text-lg">You kept the night at bay for {uiState.score} seconds.</p>
+              <div className="flex flex-col gap-1 mb-10">
+                <p className="text-white/40 text-lg">You kept the night at bay for {uiState.score} seconds.</p>
+                <div className="flex items-center justify-center gap-2 text-sky-400 font-mono text-sm font-bold uppercase tracking-widest">
+                  Best Session: {highScore}s
+                </div>
+              </div>
               
               <button 
                 onClick={(e) => { e.stopPropagation(); restart(); }}
