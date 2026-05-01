@@ -19,6 +19,8 @@ export interface Particle {
 export interface Wood {
   x: number;
   y: number;
+  vy: number;
+  targetY: number;
   type: 'stick' | 'log';
   rotation: number;
   life: number;

@@ -31,9 +31,9 @@ export const HUD: React.FC<HUDProps> = ({ uiState }) => {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className="text-[10px] font-black text-red-500 uppercase tracking-[0.3em] animate-pulse"
+              className="text-xs text-center font-black text-red-500 tracking-[0.3em] animate-pulse"
             >
-              Fire is dying!
+              The embers are cooling
             </motion.div>
           )}
         </AnimatePresence>

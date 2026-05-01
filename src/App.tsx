@@ -71,6 +71,9 @@ export default function App() {
     const { width, height } = getCanvasDimensions();
     const centerX = width / 2;
     const centerY = height * 0.75;
+    const groundY = centerY;
+    const targetY = groundY + (Math.random() - 0.5) * 30;
+
     const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
     const fireRadius = 15 + (state.current.intensity * 0.4);
     
@@ -88,14 +91,14 @@ export default function App() {
         state.current.intensity = Math.min(100, state.current.intensity + 8 * fireGainMult * timingBonus * fuelEfficiency * spatialBonus);
         state.current.smoke += state.current.currentEvent === 'DAMP_WOOD' ? 12 : 5;
       }
-      state.current.woods.push({ x, y, type: 'stick', rotation: Math.random() * Math.PI, life: 1.0, isBurning });
+      state.current.woods.push({ x, y, vy: 0, targetY, type: 'stick', rotation: Math.random() * Math.PI, life: 1.0, isBurning });
     } else {
       state.current.logs--;
       if (isBurning) {
         state.current.intensity = Math.min(100, state.current.intensity + 22 * fireGainMult * timingBonus * fuelEfficiency * spatialBonus);
         state.current.smoke += state.current.currentEvent === 'DAMP_WOOD' ? 35 : 22; 
       }
-      state.current.woods.push({ x, y, type: 'log', rotation: Math.random() * Math.PI, life: 1.0, isBurning });
+      state.current.woods.push({ x, y, vy: 0, targetY, type: 'log', rotation: Math.random() * Math.PI, life: 1.0, isBurning });
     }
   }, [state]);
 

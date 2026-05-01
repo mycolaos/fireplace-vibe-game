@@ -156,7 +156,31 @@ export const drawGlow = (ctx: CanvasRenderingContext2D, centerX: number, centerY
 };
 
 export const drawWoods = (ctx: CanvasRenderingContext2D, woods: Wood[], dt: number, intensity: number, time: number) => {
+  const centerX = ctx.canvas.width / 2;
+  const gravity = 1200; // pixels per second squared
+
   return woods.filter(w => {
+    // Physics: Falling logic
+    if (w.y < w.targetY) {
+      w.vy += gravity * dt;
+      w.y += w.vy * dt;
+      
+      // Hit target (ground/pile)
+      if (w.y >= w.targetY) {
+        w.y = w.targetY;
+        w.vy = 0;
+        
+        // Check for ignition on impact if not already burning
+        if (!w.isBurning) {
+          const dist = Math.sqrt((w.x - centerX) ** 2 + (w.y - w.targetY) ** 2);
+          const fireRadius = 25 + (intensity * 0.5);
+          if (dist < fireRadius) {
+            w.isBurning = true;
+          }
+        }
+      }
+    }
+
     const decayRate = w.isBurning ? 0.15 : 0.05;
     w.life -= decayRate * dt;
     
