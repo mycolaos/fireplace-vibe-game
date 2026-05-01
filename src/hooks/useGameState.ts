@@ -1,0 +1,100 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useRef, useCallback, useState } from 'react';
+import { 
+  INITIAL_INTENSITY, 
+  MAX_INTENSITY, 
+  INTENSITY_DECAY_BASE, 
+  SMOKE_DECAY, 
+  MAX_STICKS, 
+  MAX_LOGS, 
+  STICK_REGEN_TIME, 
+  LOG_REGEN_TIME,
+  DIFFICULTY_INCREMENT
+} from '../constants';
+import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree } from '../types';
+
+export function useGameState() {
+  const state = useRef({
+    intensity: INITIAL_INTENSITY,
+    oxygen: 100,
+    smoke: 0,
+    wind: 0 as -1 | 0 | 1,
+    score: 0,
+    lastTick: 0,
+    particles: [] as Particle[],
+    woods: [] as Wood[],
+    stars: [] as Star[],
+    fireflies: [] as Firefly[],
+    trees: [] as Tree[],
+    gameOver: false,
+    startTime: 0,
+    nextWindChange: 0,
+    decayRate: INTENSITY_DECAY_BASE,
+    sticks: MAX_STICKS,
+    logs: MAX_LOGS,
+    stickTimer: 0,
+    logTimer: 0,
+    currentEvent: 'NONE' as GameEvent,
+    eventEndTime: 0,
+    nextEventTime: performance.now() + 8000,
+  });
+
+  const [uiState, setUiState] = useState<UIState>({
+    score: 0,
+    intensity: INITIAL_INTENSITY,
+    oxygen: 100,
+    smoke: 0,
+    wind: 0,
+    gameOver: false,
+    sticks: MAX_STICKS,
+    logs: MAX_LOGS,
+    currentEvent: 'NONE',
+  });
+
+  const updateUI = useCallback(() => {
+    setUiState({
+      score: state.current.score,
+      intensity: state.current.intensity,
+      oxygen: state.current.oxygen,
+      smoke: state.current.smoke,
+      wind: state.current.wind,
+      gameOver: state.current.gameOver,
+      sticks: state.current.sticks,
+      logs: state.current.logs,
+      currentEvent: state.current.currentEvent,
+    });
+  }, []);
+
+  const restartGame = useCallback(() => {
+    const now = performance.now();
+    state.current = {
+      ...state.current,
+      intensity: INITIAL_INTENSITY,
+      oxygen: 100,
+      smoke: 0,
+      wind: 0,
+      score: 0,
+      lastTick: now,
+      particles: [],
+      woods: [],
+      gameOver: false,
+      startTime: now,
+      nextWindChange: now + 5000,
+      decayRate: INTENSITY_DECAY_BASE,
+      sticks: MAX_STICKS,
+      logs: MAX_LOGS,
+      stickTimer: 0,
+      logTimer: 0,
+      currentEvent: 'NONE',
+      eventEndTime: 0,
+      nextEventTime: now + 8000,
+    };
+    updateUI();
+  }, [updateUI]);
+
+  return { state, uiState, setUiState, updateUI, restartGame };
+}

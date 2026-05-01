@@ -1,0 +1,188 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Wood, Star, Firefly, Tree } from '../types';
+
+export const drawSky = (ctx: CanvasRenderingContext2D, width: number, horizonY: number) => {
+  const skyGradient = ctx.createLinearGradient(0, 0, 0, horizonY);
+  skyGradient.addColorStop(0, '#020205');
+  skyGradient.addColorStop(1, '#0a0a1a');
+  ctx.fillStyle = skyGradient;
+  ctx.fillRect(0, 0, width, horizonY);
+};
+
+export const drawGround = (ctx: CanvasRenderingContext2D, width: number, height: number, horizonY: number) => {
+  const groundGradient = ctx.createLinearGradient(0, horizonY, 0, height);
+  groundGradient.addColorStop(0, '#0a0714');
+  groundGradient.addColorStop(1, '#05020a');
+  ctx.fillStyle = groundGradient;
+  ctx.fillRect(0, horizonY, width, height - horizonY);
+};
+
+export const drawMoon = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  const moonX = width * 0.20;
+  const moonY = height * 0.20;
+  ctx.save();
+  ctx.shadowBlur = 40;
+  ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+  ctx.fillStyle = '#fefce8';
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, 30, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(moonX + 10, moonY - 5, 28, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+};
+
+export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: number, horizonY: number, time: number) => {
+  ctx.fillStyle = 'white';
+  stars.forEach(s => {
+    const twinkle = Math.sin(time * 0.002 + s.phase) * 0.5 + 0.5;
+    ctx.globalAlpha = 0.3 + twinkle * 0.7;
+    ctx.beginPath();
+    ctx.arc(s.x * width, s.y * horizonY * 0.9, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1.0;
+};
+
+export const drawDunes = (ctx: CanvasRenderingContext2D, width: number, horizonY: number) => {
+  const drawDune = (height: number, color: string, offset: number) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, horizonY + 20);
+    for(let x = 0; x <= width; x += 10) {
+      const y = horizonY - height + Math.sin(x * 0.005 + offset) * 20;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(width, horizonY + 20);
+    ctx.fill();
+  };
+  drawDune(60, '#0a0514', 1);
+  drawDune(30, '#0d071a', 5);
+};
+
+export const drawCabin = (ctx: CanvasRenderingContext2D, width: number, horizonY: number, time: number) => {
+  const cabinX = width * 0.8;
+  const cabinY = horizonY - 15 + Math.sin(cabinX * 0.005 + 1) * 5;
+  ctx.fillStyle = '#05020a';
+  ctx.beginPath();
+  ctx.moveTo(cabinX - 20, cabinY);
+  ctx.lineTo(cabinX - 20, cabinY - 15);
+  ctx.lineTo(cabinX, cabinY - 25);
+  ctx.lineTo(cabinX + 20, cabinY - 15);
+  ctx.lineTo(cabinX + 20, cabinY);
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.fillRect(cabinX + 8, cabinY - 22, 5, -8);
+  const smokeFlick = (time * 0.001) % 1;
+  ctx.fillStyle = `rgba(255, 255, 255, ${0.15 * (1 - smokeFlick)})`;
+  ctx.beginPath();
+  ctx.arc(cabinX + 10 + Math.sin(time * 0.005) * 5, cabinY - 30 - smokeFlick * 20, 4 + smokeFlick * 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  const flick = Math.sin(time * 0.01) * 0.2 + 0.8;
+  ctx.fillStyle = `rgba(255, 200, 50, ${flick * 0.8})`;
+  ctx.fillRect(cabinX - 5, cabinY - 10, 10, 8);
+  ctx.shadowBlur = 15 * flick;
+  ctx.shadowColor = 'orange';
+  ctx.strokeRect(cabinX - 5, cabinY - 10, 10, 8);
+  ctx.shadowBlur = 0;
+};
+
+export const drawTrees = (ctx: CanvasRenderingContext2D, trees: Tree[], width: number, horizonY: number, time: number) => {
+  trees.forEach(t => {
+    const sway = Math.sin(time * 0.001 + t.phase) * 0.05;
+    ctx.save();
+    const treeY = horizonY + (t.y - 0.75) * 100;
+    ctx.translate(t.x * width, treeY);
+    ctx.rotate(sway);
+    ctx.fillStyle = '#05020a';
+    ctx.fillRect(-2, 0, 4, -t.height);
+    for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        const levelY = -t.height * (0.4 + i * 0.3);
+        const levelWidth = 15 - i * 4;
+        ctx.moveTo(0, levelY - 15);
+        ctx.lineTo(-levelWidth, levelY + 10);
+        ctx.lineTo(levelWidth, levelY + 10);
+        ctx.fill();
+    }
+    ctx.restore();
+  });
+};
+
+export const drawFireflies = (ctx: CanvasRenderingContext2D, fireflies: Firefly[], width: number, height: number, time: number) => {
+  ctx.save();
+  ctx.shadowBlur = 8;
+  fireflies.forEach(f => {
+      const x = (f.x * width) + Math.sin(time * f.speed + f.phase) * 30;
+      const y = (f.y * height) + Math.cos(time * f.speed + f.phase) * 30;
+      const flick = Math.sin(time * 0.005 + f.offset) * 0.5 + 0.5;
+      ctx.shadowColor = '#d4d4d8';
+      ctx.fillStyle = `rgba(187, 247, 208, ${flick * 0.8})`;
+      ctx.beginPath();
+      ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+  });
+  ctx.restore();
+};
+
+export const drawGlow = (ctx: CanvasRenderingContext2D, centerX: number, centerY: number, intensity: number, width: number, height: number) => {
+  const intensityNorm = intensity / 100;
+  const groundGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 300 * intensityNorm);
+  groundGlow.addColorStop(0, `rgba(255, 80, 0, ${0.2 * intensityNorm})`);
+  groundGlow.addColorStop(0.5, `rgba(150, 40, 0, ${0.1 * intensityNorm})`);
+  groundGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = groundGlow;
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, 300 * intensityNorm, 100 * intensityNorm, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const bgGrade = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, 150 + intensity * 3.5);
+  bgGrade.addColorStop(0, `rgba(255, 120, 40, ${intensityNorm * 0.25})`);
+  bgGrade.addColorStop(0.4, `rgba(180, 60, 20, ${intensityNorm * 0.15})`);
+  bgGrade.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = bgGrade;
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = 'source-over';
+};
+
+export const drawWoods = (ctx: CanvasRenderingContext2D, woods: Wood[], dt: number, intensity: number, time: number) => {
+  return woods.filter(w => {
+    const decayRate = w.isBurning ? 0.15 : 0.05;
+    w.life -= decayRate * dt;
+    
+    ctx.save();
+    ctx.translate(w.x, w.y);
+    ctx.rotate(w.rotation);
+    ctx.fillStyle = w.type === 'log' ? '#5d4037' : '#8d6e63';
+    
+    if (w.isBurning) {
+      const pulsate = Math.sin(time * 0.01 + w.x) * 0.2 + 0.8;
+      ctx.shadowBlur = 10 * pulsate * w.life;
+      ctx.shadowColor = '#ff5500';
+      ctx.fillStyle = `rgb(${80 + 175 * pulsate}, ${40 + 80 * pulsate}, 20)`;
+    }
+
+    const w_width = w.type === 'log' ? 40 : 20;
+    const w_height = w.type === 'log' ? 12 : 5;
+    ctx.fillRect(-w_width / 2, -w_height / 2, w_width, w_height);
+    
+    if (w.isBurning && Math.random() > 0.95) {
+       const sx = (Math.random() - 0.5) * w_width;
+       const sy = (Math.random() - 0.5) * w_height;
+       ctx.fillStyle = '#fff';
+       ctx.fillRect(sx, sy, 2, 2);
+    }
+    ctx.restore();
+    return w.life > 0 || intensity > 0;
+  });
+};
