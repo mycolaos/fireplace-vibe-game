@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Flame, Log as LogIcon, Wind, Timer as TimerIcon, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { Flame, Logs as LogIcon, Wind, Timer as TimerIcon, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
 // --- Constants ---
 const INITIAL_INTENSITY = 50;
@@ -201,6 +201,7 @@ export default function App() {
       lastTick: performance.now(),
       particles: [],
       woods: [],
+      stars: state.current.stars,
       gameOver: false,
       startTime: performance.now(),
       nextWindChange: performance.now() + 5000,
