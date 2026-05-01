@@ -378,8 +378,8 @@ export default function App() {
           state.current.intensity -= 0.2 * dt;
         }
         
-        if (state.current.intensity <= 0) {
-          state.current.intensity = 0;
+        if (state.current.intensity <= 0 || state.current.oxygen <= 0) {
+          state.current.intensity = Math.max(0, state.current.intensity);
           state.current.gameOver = true;
         }
 
@@ -427,8 +427,8 @@ export default function App() {
       ctx.fillRect(0, horizonY, canvas.width, canvas.height - horizonY);
 
       // 1.5 Moon
-      const moonX = canvas.width * 0.15;
-      const moonY = canvas.height * 0.15;
+      const moonX = canvas.width * 0.20;
+      const moonY = canvas.height * 0.20;
       ctx.save();
       ctx.shadowBlur = 40;
       ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
@@ -850,7 +850,7 @@ export default function App() {
                 </div>
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-white mb-2 tracking-tighter">
-                The Fire Went Out
+                {uiState.oxygen <= 0 ? "You Suffocated" : "The Fire Went Out"}
               </h2>
               <p className="text-white/40 mb-10 text-lg">You kept the night at bay for {uiState.score} seconds.</p>
               
