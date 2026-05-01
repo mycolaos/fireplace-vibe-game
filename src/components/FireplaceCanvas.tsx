@@ -52,41 +52,72 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
     window.addEventListener('resize', resize);
     resize();
 
-    // Initialize Game Elements if not done
-    if (state.current.stars.length === 0) {
-      for (let i = 0; i < 150; i++) {
-        state.current.stars.push({
-          x: Math.random(),
-          y: Math.random() * 0.7,
-          size: 0.5 + Math.random() * 1.5,
-          phase: Math.random() * Math.PI * 2
-        });
-      }
-      for (let i = 0; i < 20; i++) {
-        state.current.fireflies.push({
-          x: Math.random(),
-          y: 0.5 + Math.random() * 0.4,
-          phase: Math.random() * Math.PI * 2,
-          speed: 0.0001 + Math.random() * 0.001,
-          offset: Math.random() * 100
-        });
-      }
-      for (let i = 0; i < 8; i++) {
-        state.current.trees.push({
-          x: 0.1 + Math.random() * 0.8,
-          y: 0.75 + Math.random() * 0.1,
-          height: 40 + Math.random() * 60,
-          phase: Math.random() * Math.PI * 2
-        });
-      }
-    }
-
     let rafId: number;
 
     const loop = (time: number) => {
       // Calculate delta time for frame-independent movement/physics
       const dt = (time - state.current.lastTick) / 1000;
       state.current.lastTick = time;
+
+      // Initialize Game Elements if not done (triggers on start and after restart)
+      if (state.current.stars.length === 0) {
+        for (let i = 0; i < 150; i++) {
+          state.current.stars.push({
+            x: Math.random(),
+            y: Math.random() * 0.7,
+            size: 0.5 + Math.random() * 1.5,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+        for (let i = 0; i < 20; i++) {
+          state.current.fireflies.push({
+            x: Math.random(),
+            y: 0.5 + Math.random() * 0.4,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.0001 + Math.random() * 0.001,
+            offset: Math.random() * 100
+          });
+        }
+        for (let i = 0; i < 8; i++) {
+          state.current.trees.push({
+            x: 0.1 + Math.random() * 0.8,
+            y: 0.75 + Math.random() * 0.1,
+            height: 40 + Math.random() * 60,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+
+        // Initialize with some embers (burning wood)
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height * 0.75;
+        
+        // Add a few initial burning logs
+        for (let i = 0; i < 3; i++) {
+          state.current.woods.push({
+            x: centerX + (Math.random() - 0.5) * 50,
+            y: centerY + (Math.random() - 0.5) * 20,
+            vy: 0,
+            targetY: centerY + (Math.random() - 0.5) * 20,
+            type: 'log',
+            rotation: Math.random() * Math.PI,
+            life: 0.5 + Math.random() * 0.5,
+            isBurning: true
+          });
+        }
+        // Add a few initial burning sticks
+        for (let i = 0; i < 4; i++) {
+          state.current.woods.push({
+            x: centerX + (Math.random() - 0.5) * 40,
+            y: centerY + (Math.random() - 0.5) * 15,
+            vy: 0,
+            targetY: centerY + (Math.random() - 0.5) * 15,
+            type: 'stick',
+            rotation: Math.random() * Math.PI,
+            life: 0.3 + Math.random() * 0.7,
+            isBurning: true
+          });
+        }
+      }
 
       if (!state.current.gameOver) {
         // --- 1. CORE STATS UPDATE ---
