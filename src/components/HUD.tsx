@@ -21,7 +21,7 @@ export const HUD: React.FC<HUDProps> = ({ uiState }) => {
         <div className="flex justify-end items-center gap-3 text-white shadow-2xl">
           <TimerIcon className="w-5 h-5" />
           <span className="font-bold tracking-widest font-mono">
-            {String(uiState.score).padStart(3, '0')}s
+            {String(uiState.score)}
           </span>
         </div>
         

@@ -40,8 +40,8 @@ export const GameOver: React.FC<GameOverProps> = ({ uiState, highScore, onRestar
             </h2>
             <div className="flex flex-col gap-1 mb-10">
               <p className="text-white/40 text-lg">You kept the night at bay for {uiState.score} seconds.</p>
-              <div className="flex items-center justify-center gap-2 text-sky-400 font-mono text-sm font-bold uppercase tracking-widest">
-                Best Session: {highScore}s
+              <div className="flex items-center justify-center gap-2 text-sky-400 font-mono text-sm font-bold tracking-widest">
+                Best Session: {highScore} seconds
               </div>
             </div>
             
