@@ -46,8 +46,8 @@ class FireAudio {
     // Main Rumble (Low-end 'roar' of fire)
     this.noiseFilter = this.ctx.createBiquadFilter();
     this.noiseFilter.type = 'lowpass';
-    this.noiseFilter.frequency.value = 400;
-    this.noiseFilter.Q.value = 1.0;
+    this.noiseFilter.frequency.value = 250;
+    this.noiseFilter.Q.value = 0.5;
 
     noise.connect(this.noiseFilter);
     this.noiseFilter.connect(this.gainNode);
@@ -97,12 +97,12 @@ class FireAudio {
     if (this.ctx.state === 'suspended') this.ctx.resume();
     
     // Mute/Unmute logic
-    const targetGain = muted ? 0 : (intensity / 100) * 0.3;
+    const targetGain = muted ? 0 : (intensity / 100) * 0.18;
     this.gainNode.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.2);
     
     // Low-end roar frequency moves with size
     if (this.noiseFilter) {
-      const freq = 150 + (intensity * 2.5);
+      const freq = 100 + (intensity * 1.5);
       this.noiseFilter.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.5);
     }
   }
@@ -746,20 +746,23 @@ export default function App() {
       </AnimatePresence>
 
       {/* --- HUD --- */}
-      <div className="absolute top-25 right-6 flex flex-col gap-4 pointer-events-none">
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-none">
         <div className="flex justify-end items-center gap-3 text-white shadow-2xl">
           <TimerIcon className="w-5 h-5" />
           <span className="font-bold tracking-widest font-mono">
             {String(uiState.score).padStart(3, '0')}s
           </span>
         </div>
+      </div>
 
-        <div className="flex flex-col gap-2">
+      {/** Oxygen */}
+      <div className="absolute bottom-10 left-6 right-6 flex gap-4 pointer-events-none">
+        <div className="w-full flex flex-col gap-2">
            <div className="flex items-center justify-between px-1">
              <span className="text-[10px] uppercase font-bold text-sky-400/60 tracking-tighter">Oxygen</span>
              <Wind className="w-3 h-3 text-sky-400" />
            </div>
-           <div className="w-48 h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
+           <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
               <motion.div 
                 className={`h-full ${uiState.oxygen < 30 ? 'bg-red-400' : 'bg-sky-400'}`}
                 animate={{ width: `${uiState.oxygen}%` }}
@@ -807,7 +810,7 @@ export default function App() {
       </div>
 
       {/* --- Controls Info --- */}
-      <div className="absolute top-60 right-6 flex flex-col items-center gap-4 pointer-events-none">        
+      <div className="absolute top-35 right-6 flex flex-col items-center gap-4 pointer-events-none">        
         {!uiState.gameOver && (
           <div className="flex flex-col items-center gap-6">
             <div className="flex gap-8 opacity-40 hover:opacity-100 transition-opacity">
@@ -829,7 +832,7 @@ export default function App() {
       </div>
 
       {/* --- Controls--- */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 pointer-events-none">
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 pointer-events-none">
         {isPressing && (
           <div className="flex flex-col items-center gap-2 mb-4">
             <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
