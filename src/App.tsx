@@ -982,13 +982,12 @@ export default function App() {
             <button
               onMouseDown={(e) => { e.stopPropagation(); handleBlow(); }}
               onTouchStart={(e) => { e.stopPropagation(); handleBlow(); }}
-              className="group pointer-events-auto flex items-center gap-3 bg-white/5 hover:bg-white/10 active:scale-95 px-6 py-3 rounded-full border border-white/10 transition-all backdrop-blur-md"
+              className="group pointer-events-auto flex items-center gap-3 active:scale-95 py-1 px-2 bg-white/5 hover:bg-white/10 active:scale-95 rounded-full border border-white/10 transition-all backdrop-blur-md"
             >
-              <Wind className="w-5 h-5 text-sky-400 group-hover:animate-bounce" />
               <div className="flex flex-col items-start">
-                <span className="text-xs font-black text-white uppercase tracking-widest">Blow Air</span>
-                <span className="text-[9px] text-white/40 uppercase font-bold">[Spacebar]</span>
+                <span className="text-xs font-black text-white uppercase tracking-widest">Air</span>
               </div>
+              <Wind className="w-5 h-5 text-sky-400 group-hover:animate-bounce" />
             </button>
           </div>
         )}
