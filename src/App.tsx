@@ -4,139 +4,25 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Flame, Logs as LogIcon, Wind, Timer as TimerIcon, RotateCcw, Volume2, VolumeX } from 'lucide-react';
-
-// --- Constants ---
-const INITIAL_INTENSITY = 50;
-const MAX_INTENSITY = 100;
-const INTENSITY_DECAY_BASE = 0.8;
-const SMOKE_DECAY = 0.5;
-const DIFFICULTY_INTERVAL = 10000; // 10 seconds
-const DIFFICULTY_INCREMENT = 0.15;
-const CABIN_HIT_RADIUS = 45;
-
-const MAX_STICKS = 15;
-const MAX_LOGS = 5;
-const STICK_REGEN_TIME = 3000; // 3s per stick
-const LOG_REGEN_TIME = 8000; // 8s per log
-
-type GameEvent = 'NONE' | 'WIND_GUST' | 'DAMP_WOOD' | 'PERFECT_AIR';
-
-// --- Audio Class ---
-class FireAudio {
-  ctx: AudioContext | null = null;
-  gainNode: GainNode | null = null;
-  noiseFilter: BiquadFilterNode | null = null;
-  isMuted: boolean = false;
-
-  init() {
-    if (this.ctx) return;
-    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    this.gainNode = this.ctx.createGain();
-    this.gainNode.connect(this.ctx.destination);
-    this.gainNode.gain.value = 0;
-
-    // Create a noise buffer
-    const bufferSize = this.ctx.sampleRate * 2;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-
-    // Noise Source
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-    noise.loop = true;
-
-    // Main Rumble (Low-end 'roar' of fire)
-    this.noiseFilter = this.ctx.createBiquadFilter();
-    this.noiseFilter.type = 'lowpass';
-    this.noiseFilter.frequency.value = 250;
-    this.noiseFilter.Q.value = 0.5;
-
-    noise.connect(this.noiseFilter);
-    this.noiseFilter.connect(this.gainNode);
-    noise.start();
-
-    // Crackle Loop - refined for sharper 'pops'
-    this.scheduleCrackle();
-  }
-
-  scheduleCrackle() {
-    if (!this.ctx || !this.gainNode) return;
-    
-    const baseVol = this.gainNode.gain.value;
-    // Only crackle if there's significant heat
-    if (baseVol > 0.02 && Math.random() < 0.4) {
-      // Use noise burst followed by resonant filter for a 'pop'
-      const burstSize = this.ctx.sampleRate * 0.01; // very short
-      const burstBuffer = this.ctx.createBuffer(1, burstSize, this.ctx.sampleRate);
-      const data = burstBuffer.getChannelData(0);
-      for (let i = 0; i < burstSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * (1 - i / burstSize);
-      }
-
-      const source = this.ctx.createBufferSource();
-      source.buffer = burstBuffer;
-
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.value = 1000 + Math.random() * 3000;
-      filter.Q.value = 2;
-
-      const g = this.ctx.createGain();
-      g.gain.value = (0.2 + Math.random() * 0.4) * baseVol;
-
-      source.connect(filter);
-      filter.connect(g);
-      g.connect(this.ctx.destination);
-      
-      source.start();
-    }
-
-    setTimeout(() => this.scheduleCrackle(), 30 + Math.random() * 400);
-  }
-
-  update(intensity: number, muted: boolean) {
-    if (!this.ctx || !this.gainNode) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    
-    // Mute/Unmute logic
-    const targetGain = muted ? 0 : (intensity / 100) * 0.18;
-    this.gainNode.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.2);
-    
-    // Low-end roar frequency moves with size
-    if (this.noiseFilter) {
-      const freq = 100 + (intensity * 1.5);
-      this.noiseFilter.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.5);
-    }
-  }
-}
-
-const fireAudio = new FireAudio();
-
-// --- Types ---
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  life: number; // 0 to 1
-  type: 'fire' | 'smoke';
-  color: string;
-}
-
-interface Wood {
-  x: number;
-  y: number;
-  type: 'stick' | 'log';
-  rotation: number;
-  life: number;
-  isBurning: boolean;
-}
+import { Volume2, VolumeX } from 'lucide-react';
+import { 
+  INITIAL_INTENSITY, 
+  MAX_INTENSITY, 
+  INTENSITY_DECAY_BASE, 
+  SMOKE_DECAY, 
+  CABIN_HIT_RADIUS, 
+  MAX_STICKS, 
+  MAX_LOGS, 
+  STICK_REGEN_TIME, 
+  LOG_REGEN_TIME,
+  DIFFICULTY_INCREMENT
+} from './constants';
+import { Particle, Wood, GameEvent, UIState } from './types';
+import { fireAudio } from './services/audioService';
+import { HUD } from './components/HUD';
+import { GameOver } from './components/GameOver';
+import { Controls } from './components/Controls';
+import { VibePortal } from './components/VibePortal';
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -169,7 +55,7 @@ export default function App() {
     nextEventTime: performance.now() + 8000,
   });
 
-  const [uiState, setUiState] = useState({
+  const [uiState, setUiState] = useState<UIState>({
     score: 0,
     intensity: INITIAL_INTENSITY,
     oxygen: 100,
@@ -178,7 +64,7 @@ export default function App() {
     gameOver: false,
     sticks: MAX_STICKS,
     logs: MAX_LOGS,
-    currentEvent: 'NONE' as GameEvent,
+    currentEvent: 'NONE',
   });
 
   const [highScore, setHighScore] = useState<number>(0);
@@ -901,97 +787,12 @@ export default function App() {
       <canvas ref={canvasRef} className="absolute inset-0 block" />
 
       {/* --- Cabin Tooltip --- */}
-      <AnimatePresence>
-        {hoveringCabin && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.9 }}
-            className="absolute z-50 pointer-events-none backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded bg-black/40 border border-white/10 shadow-lg whitespace-nowrap"
-            style={{ 
-              right: '10%', 
-              top: '40%',
-              transform: 'translate(-50%, -100%)'
-            }}
-          >
-            Vibe portal
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <VibePortal isVisible={hoveringCabin} />
 
-      {/* --- HUD --- */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
-        <div className="flex justify-end items-center gap-3 text-white shadow-2xl">
-          <TimerIcon className="w-5 h-5" />
-          <span className="font-bold tracking-widest font-mono">
-            {String(uiState.score).padStart(3, '0')}s
-          </span>
-        </div>
-        
-        {/* Critical State Warning */}
-        <AnimatePresence>
-          {uiState.intensity < 20 && !uiState.gameOver && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="text-[10px] font-black text-red-500 uppercase tracking-[0.3em] animate-pulse"
-            >
-              Fire is dying!
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* --- HUD (Score, Oxygen, Resources, Events) --- */}
+      <HUD uiState={uiState} />
 
-      {/* --- Resources Section --- */}
-      {!uiState.gameOver && (
-        <div className="absolute bottom-20 left-6 right-6 flex justify-between pointer-events-none">
-          {/* Sticks */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Sticks</span>
-            <div className="flex gap-1">
-              {[...Array(MAX_STICKS)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`w-1 h-3 rounded-full transition-colors ${i < uiState.sticks ? 'bg-orange-400' : 'bg-white/10'}`} 
-                />
-              ))}
-            </div>
-          </div>
-          
-          {/* Logs */}
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Logs</span>
-            <div className="flex gap-1.5">
-              {[...Array(MAX_LOGS)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`w-3 h-3 rounded-sm transition-colors ${i < uiState.logs ? 'bg-[#5d4037]' : 'bg-white/10'}`} 
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/** Oxygen */}
-      <div className="absolute bottom-10 left-6 right-6 flex gap-4 pointer-events-none">
-        <div className="w-full flex flex-col gap-2">
-           <div className="flex gap-1 items-center px-1 text-[10px]">
-             <span className="uppercase font-bold text-sky-400/60 tracking-tighter">Oxygen</span>
-             <Wind className="w-3 h-3 text-sky-400" />
-             {uiState.smoke > 20 &&  <span className="ml-auto text-gray-300">Smoke Level: {Math.floor(uiState.smoke)}%</span>}
-           </div>
-           <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
-              <motion.div 
-                className={`h-full ${uiState.oxygen < 30 ? 'bg-red-400' : 'bg-sky-400'}`}
-                animate={{ width: `${uiState.oxygen}%` }}
-                transition={{ type: 'spring', stiffness: 50 }}
-              />
-           </div>
-        </div>
-      </div>
-
+      {/* --- Mute Toggle --- */}
       <div className="absolute top-6 right-6 flex items-center gap-3">
         <button
           onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
@@ -1001,120 +802,20 @@ export default function App() {
         </button>
       </div>
 
-      {/** State log / Events */}
-      <div className="absolute bottom-80 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
-        <AnimatePresence mode="wait">
-            {uiState.currentEvent !== 'NONE' ? (
-              <motion.div 
-                key={uiState.currentEvent}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className={`flex items-center gap-3 backdrop-blur-md px-6 py-2.5 rounded-full border shadow-2xl pointer-events-none
-                  ${uiState.currentEvent === 'WIND_GUST' ? 'bg-sky-500/20 border-sky-400/30' : 
-                    uiState.currentEvent === 'DAMP_WOOD' ? 'bg-stone-500/20 border-stone-400/30' : 
-                    'bg-emerald-500/20 border-emerald-400/30'}`}
-              >
-                {uiState.currentEvent === 'WIND_GUST' && <Wind className="w-5 h-5 text-sky-400" />}
-                {uiState.currentEvent === 'DAMP_WOOD' && <LogIcon className="w-5 h-5 text-stone-400" />}
-                {uiState.currentEvent === 'PERFECT_AIR' && <Flame className="w-5 h-5 text-emerald-400" />}
-                
-                <div className="flex flex-col">
-                  <span className="text-xs font-black text-white uppercase tracking-widest">
-                    {uiState.currentEvent.replace('_', ' ')}
-                  </span>
-                  <span className="text-[8px] text-white/60 font-bold uppercase tracking-tight">
-                    {uiState.currentEvent === 'WIND_GUST' ? 'Intensity Penalty / Oxygen Boost' :
-                     uiState.currentEvent === 'DAMP_WOOD' ? 'Reduced Fuel Efficiency' :
-                     'High Efficiency Burn'}
-                  </span>
-                </div>
-              </motion.div>
-            ) : uiState.wind !== 0 && (
-              <motion.div 
-                key={uiState.wind}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="flex items-center gap-2 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/10 pointer-events-none"
-              >
-                <Wind className={`w-5 h-5 text-sky-300 ${uiState.wind === -1 ? 'rotate-180' : ''}`} />
-                <span className="text-xs font-bold text-white/80">
-                  {uiState.wind === 1 ? 'East Breeze' : 'West Breeze'}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-      </div>
-
-      {/* --- Controls--- */}
-      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none">
-        {isPressing && (
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
-               <div className="h-full bg-red-500 transition-all" style={{ width: `${logCharge}%` }} />
-            </div>
-            <span className="text-[10px] text-white/60 uppercase font-black tracking-[0.2em]">Charging Log</span>
-          </div>
-        )}
-        
-        {!uiState.gameOver && (
-          <div className="flex flex-col items-center gap-6">
-            <button
-              onMouseDown={(e) => { e.stopPropagation(); handleBlow(); }}
-              onTouchStart={(e) => { e.stopPropagation(); handleBlow(); }}
-              className="group pointer-events-auto flex items-center gap-3 active:scale-95 py-1 px-2 bg-white/5 hover:bg-white/10 active:scale-95 rounded-full border border-white/10 transition-all backdrop-blur-md"
-            >
-              <div className="flex flex-col items-start">
-                <span className="text-xs font-black text-white uppercase tracking-widest">Air</span>
-              </div>
-              <Wind className="w-5 h-5 text-sky-400 group-hover:animate-bounce" />
-            </button>
-          </div>
-        )}
-      </div>
+      {/* --- Controls (Blow, Charge) --- */}
+      <Controls 
+        uiState={uiState} 
+        isPressing={isPressing} 
+        logCharge={logCharge} 
+        handleBlow={handleBlow} 
+      />
 
       {/* --- Game Over --- */}
-      <AnimatePresence>
-        {uiState.gameOver && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-50 text-center pointer-events-auto"
-          >
-            <motion.div 
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="p-12"
-            >
-              <div className="mb-6 flex justify-center">
-                <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
-                  <Flame className="w-10 h-10 text-red-500/40" />
-                </div>
-              </div>
-              <h2 className="text-4xl md:text-5xl font-black text-white mb-2 tracking-tighter">
-                {uiState.oxygen <= 0 ? "You Suffocated" : "The Fire Went Out"}
-              </h2>
-              <div className="flex flex-col gap-1 mb-10">
-                <p className="text-white/40 text-lg">You kept the night at bay for {uiState.score} seconds.</p>
-                <div className="flex items-center justify-center gap-2 text-sky-400 font-mono text-sm font-bold uppercase tracking-widest">
-                  Best Session: {highScore}s
-                </div>
-              </div>
-              
-              <button 
-                onClick={(e) => { e.stopPropagation(); restart(); }}
-                className="group relative px-10 py-4 bg-white text-black font-bold rounded-2xl flex items-center gap-3 mx-auto transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                <div className="absolute inset-0 bg-white blur-lg opacity-0 group-hover:opacity-40 transition-opacity rounded-2xl" />
-                <span className="relative">Light it again</span>
-                <RotateCcw className="relative w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <GameOver 
+        uiState={uiState} 
+        highScore={highScore} 
+        onRestart={restart} 
+      />
 
       {/* --- Ambient Vibes --- */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
