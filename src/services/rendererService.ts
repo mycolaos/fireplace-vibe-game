@@ -4,7 +4,7 @@
  */
 
 import { Wood, Star, Firefly, Tree } from '../types';
-import { SKY_COLORS } from '../constants';
+import { SKY_COLORS, MOON_POSITION_CONFIG } from '../constants';
 
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -72,8 +72,9 @@ export const drawMoon = (ctx: CanvasRenderingContext2D, width: number, height: n
   }
   if (alpha <= 0) return;
 
-  const moonX = width * (0.2 + (cycle * 0.6)); // Moon moves across the sky
-  const moonY = height * (0.25 - Math.sin(cycle * Math.PI) * 0.15);
+  const { startX, endX, baseY, arcHeight } = MOON_POSITION_CONFIG;
+  const moonX = width * (startX + (cycle * (endX - startX))); // Moon moves across the sky
+  const moonY = height * (baseY - Math.sin(cycle * Math.PI) * arcHeight);
   
   ctx.save();
   ctx.globalAlpha = alpha;

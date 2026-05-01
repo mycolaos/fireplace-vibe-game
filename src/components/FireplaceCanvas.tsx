@@ -99,7 +99,7 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
 
         // --- 1.5 DAY CYCLE UPDATE ---
         const cycleDurationSeconds = DAY_CYCLE_DURATION / 1000;
-        state.current.cycleProgress = (totalTime % cycleDurationSeconds) / cycleDurationSeconds;
+        state.current.cycleProgress = ((totalTime / cycleDurationSeconds) + state.current.initialCycle) % 1.0;
 
         // --- 2. WEATHER SYSTEM ---
         if (time > state.current.nextWeatherTime) {

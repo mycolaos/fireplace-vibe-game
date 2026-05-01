@@ -18,12 +18,24 @@ export const LOG_REGEN_TIME = 8000; // 8s per log
 
 export const WEATHER_MIN_DURATION = 15000; // 15s
 export const WEATHER_MAX_DURATION = 45000; // 45s
-export const DAY_CYCLE_DURATION = 180 * 1000; // 3 minutes for a full cycle
+
+export const DAY_CYCLE_DURATION = 24 * 60 * 1000; // 3 minutes for a full cycle
+export const CYCLE_START_DUSK = 0.0;
+export const CYCLE_START_NIGHT = 0.4;
+export const CYCLE_START_DAWN = 0.7;
+export const DEFAULT_CYCLE_START = CYCLE_START_NIGHT;
 
 export const SKY_COLORS = {
   DUSK: { top: '#1a0b2e', bottom: '#e96443' },
   NIGHT: { top: '#020205', bottom: '#0a0a1a' },
   DAWN: { top: '#7474bf', bottom: '#348ac7' }
+};
+
+export const MOON_POSITION_CONFIG = {
+  startX: 0, // Start X position as % of width
+  endX: 0.8,   // End X position as % of width
+  baseY: 0.25, // Base Y position as % of height
+  arcHeight: 0.15 // Height of the orbital arc as % of height
 };
 
 export const WEATHER_CONFIG = {

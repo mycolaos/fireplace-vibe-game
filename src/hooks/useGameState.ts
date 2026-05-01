@@ -15,7 +15,8 @@ import {
   LOG_REGEN_TIME,
   DIFFICULTY_INCREMENT,
   WEATHER_MIN_DURATION,
-  WEATHER_MAX_DURATION
+  WEATHER_MAX_DURATION,
+  DEFAULT_CYCLE_START
 } from '../constants';
 import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree, WeatherType } from '../types';
 
@@ -45,7 +46,8 @@ export function useGameState() {
     nextEventTime: performance.now() + 8000,
     weather: 'CLEAR' as WeatherType,
     nextWeatherTime: performance.now() + WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION),
-    cycleProgress: 0,
+    cycleProgress: DEFAULT_CYCLE_START,
+    initialCycle: DEFAULT_CYCLE_START,
   });
 
   const [uiState, setUiState] = useState<UIState>({
@@ -59,7 +61,7 @@ export function useGameState() {
     sticks: MAX_STICKS,
     logs: MAX_LOGS,
     currentEvent: 'NONE',
-    cycleProgress: 0,
+    cycleProgress: DEFAULT_CYCLE_START,
   });
 
   const updateUI = useCallback(() => {
@@ -78,7 +80,7 @@ export function useGameState() {
     });
   }, []);
 
-  const restartGame = useCallback(() => {
+  const restartGame = useCallback((initialCycle: number = DEFAULT_CYCLE_START) => {
     const now = performance.now();
     state.current = {
       ...state.current,
@@ -103,7 +105,8 @@ export function useGameState() {
       nextEventTime: now + 8000,
       weather: 'CLEAR',
       nextWeatherTime: now + WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION),
-      cycleProgress: 0,
+      cycleProgress: initialCycle,
+      initialCycle: initialCycle,
     };
     updateUI();
   }, [updateUI]);
