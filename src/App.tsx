@@ -16,6 +16,13 @@ const DIFFICULTY_INTERVAL = 10000; // 10 seconds
 const DIFFICULTY_INCREMENT = 0.15;
 const CABIN_HIT_RADIUS = 45;
 
+const MAX_STICKS = 15;
+const MAX_LOGS = 5;
+const STICK_REGEN_TIME = 3000; // 3s per stick
+const LOG_REGEN_TIME = 8000; // 8s per log
+
+type GameEvent = 'NONE' | 'WIND_GUST' | 'DAMP_WOOD' | 'PERFECT_AIR';
+
 // --- Audio Class ---
 class FireAudio {
   ctx: AudioContext | null = null;
@@ -152,6 +159,13 @@ export default function App() {
     startTime: 0,
     nextWindChange: 0,
     decayRate: INTENSITY_DECAY_BASE,
+    sticks: MAX_STICKS,
+    logs: MAX_LOGS,
+    stickTimer: 0,
+    logTimer: 0,
+    currentEvent: 'NONE' as GameEvent,
+    eventEndTime: 0,
+    nextEventTime: performance.now() + 8000,
   });
 
   const [uiState, setUiState] = useState({
@@ -161,6 +175,9 @@ export default function App() {
     smoke: 0,
     wind: 0,
     gameOver: false,
+    sticks: MAX_STICKS,
+    logs: MAX_LOGS,
+    currentEvent: 'NONE' as GameEvent,
   });
 
   const [isPressing, setIsPressing] = useState(false);
@@ -209,6 +226,13 @@ export default function App() {
       startTime: performance.now(),
       nextWindChange: performance.now() + 5000,
       decayRate: INTENSITY_DECAY_BASE,
+      sticks: MAX_STICKS,
+      logs: MAX_LOGS,
+      stickTimer: 0,
+      logTimer: 0,
+      currentEvent: 'NONE',
+      eventEndTime: 0,
+      nextEventTime: performance.now() + 8000,
     };
     setUiState({
       score: 0,
@@ -217,6 +241,9 @@ export default function App() {
       smoke: 0,
       wind: 0,
       gameOver: false,
+      sticks: MAX_STICKS,
+      logs: MAX_LOGS,
+      currentEvent: 'NONE',
     });
     setLogCharge(0);
   };
@@ -224,17 +251,27 @@ export default function App() {
   const handleInteraction = useCallback((type: 'stick' | 'log', x: number, y: number) => {
     if (state.current.gameOver) return;
     
+    // Resource check
+    if (type === 'stick' && state.current.sticks <= 0) return;
+    if (type === 'log' && state.current.logs <= 0) return;
+
     // Initialize audio on first interaction
     fireAudio.init();
 
-    const fireGainMult = state.current.smoke > 50 ? 0.9 : 1.0;
+    // Event modifiers
+    let fuelEfficiency = 1.0;
+    if (state.current.currentEvent === 'DAMP_WOOD') fuelEfficiency = 0.4;
+    if (state.current.currentEvent === 'PERFECT_AIR') fuelEfficiency = 1.3;
+
+    const fireGainMult = state.current.smoke > 50 ? 0.8 : 1.0;
     
     // Perfect Timing Bonus
     const timingBonus = (state.current.oxygen > 40 && state.current.oxygen < 70) ? 1.25 : 1.0;
     
     if (type === 'stick') {
-      state.current.intensity = Math.min(MAX_INTENSITY, state.current.intensity + 8 * fireGainMult * timingBonus);
-      state.current.smoke += 5;
+      state.current.sticks--;
+      state.current.intensity = Math.min(MAX_INTENSITY, state.current.intensity + 8 * fireGainMult * timingBonus * fuelEfficiency);
+      state.current.smoke += state.current.currentEvent === 'DAMP_WOOD' ? 12 : 5;
       state.current.woods.push({
         x: x + (Math.random() - 0.5) * 20,
         y: y + (Math.random() - 0.5) * 20,
@@ -243,8 +280,9 @@ export default function App() {
         life: 1.0
       });
     } else {
-      state.current.intensity = Math.min(MAX_INTENSITY, state.current.intensity + 20 * fireGainMult * timingBonus);
-      state.current.smoke += 22; // Increased smoke for logs
+      state.current.logs--;
+      state.current.intensity = Math.min(MAX_INTENSITY, state.current.intensity + 22 * fireGainMult * timingBonus * fuelEfficiency);
+      state.current.smoke += state.current.currentEvent === 'DAMP_WOOD' ? 35 : 22; 
       state.current.woods.push({
         x: x + (Math.random() - 0.5) * 40,
         y: y + (Math.random() - 0.5) * 40,
@@ -344,15 +382,54 @@ export default function App() {
         state.current.score = Math.floor(totalTime);
         state.current.decayRate = INTENSITY_DECAY_BASE + Math.floor(totalTime / 10) * DIFFICULTY_INCREMENT;
 
-        // Wind System
-        if (time > state.current.nextWindChange) {
+        // Resource Regeneration
+        if (state.current.sticks < MAX_STICKS) {
+          state.current.stickTimer += dt * 1000;
+          if (state.current.stickTimer >= STICK_REGEN_TIME) {
+            state.current.sticks++;
+            state.current.stickTimer = 0;
+          }
+        }
+        if (state.current.logs < MAX_LOGS) {
+          state.current.logTimer += dt * 1000;
+          if (state.current.logTimer >= LOG_REGEN_TIME) {
+            state.current.logs++;
+            state.current.logTimer = 0;
+          }
+        }
+
+        // Random Event System
+        if (time > state.current.nextEventTime && state.current.currentEvent === 'NONE') {
+          const events: GameEvent[] = ['WIND_GUST', 'DAMP_WOOD', 'PERFECT_AIR'];
+          state.current.currentEvent = events[Math.floor(Math.random() * events.length)];
+          state.current.eventEndTime = time + 5000 + Math.random() * 5000;
+        }
+
+        if (state.current.currentEvent !== 'NONE' && time > state.current.eventEndTime) {
+          state.current.currentEvent = 'NONE';
+          state.current.nextEventTime = time + 8000 + Math.random() * 7000;
+        }
+
+        // Apply Event Logic
+        if (state.current.currentEvent === 'WIND_GUST') {
+          state.current.oxygen += 15 * dt;
+          state.current.intensity -= 0.5 * dt;
+          // Forced wind direction if gusting
+          if (Math.random() > 0.95) state.current.wind = (Math.random() > 0.5 ? 1 : -1);
+        } else if (state.current.currentEvent === 'PERFECT_AIR') {
+          state.current.oxygen = Math.min(100, state.current.oxygen + 10 * dt);
+        }
+
+        // Wind System (normal behavior)
+        if (state.current.currentEvent === 'NONE' && time > state.current.nextWindChange) {
           state.current.wind = (Math.floor(Math.random() * 3) - 1) as -1 | 0 | 1;
           state.current.nextWindChange = time + 5000 + Math.random() * 5000;
         }
 
         // --- Oxygen System ---
         // Constant consumption: base rate + intensity-based drain
-        const oxygenConsumption = (3 + state.current.intensity * 0.08) * dt;
+        const consumptionMult = state.current.currentEvent === 'PERFECT_AIR' ? 0.5 : 1.0;
+        const oxygenConsumption = (3 + state.current.intensity * 0.08) * consumptionMult * dt;
         state.current.oxygen -= oxygenConsumption;
 
         // Passive recovery (natural draft)
@@ -372,8 +449,11 @@ export default function App() {
           state.current.intensity += 0.3 * dt; // Healthy burn
         }
 
-        // Intensity Decay
-        state.current.intensity -= state.current.decayRate * dt;
+        // Intensity Decay (Faster at low intensity - Critical State)
+        let effectiveDecay = state.current.decayRate;
+        if (state.current.intensity < 20) effectiveDecay *= 2.0;
+        
+        state.current.intensity -= effectiveDecay * dt;
         if (state.current.wind !== 0) {
           state.current.intensity -= 0.2 * dt;
         }
@@ -395,6 +475,9 @@ export default function App() {
             smoke: state.current.smoke,
             wind: state.current.wind,
             gameOver: state.current.gameOver,
+            sticks: state.current.sticks,
+            logs: state.current.logs,
+            currentEvent: state.current.currentEvent,
           });
         }
         
@@ -619,6 +702,16 @@ export default function App() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
+      // Critical State Vignette
+      if (state.current.intensity < 25) {
+        const critFactor = 1 - (state.current.intensity / 25);
+        const vig = ctx.createRadialGradient(centerX, centerY, 100, centerX, centerY, canvas.width);
+        vig.addColorStop(0, 'rgba(0,0,0,0)');
+        vig.addColorStop(1, `rgba(0,0,0, ${0.8 * critFactor})`);
+        ctx.fillStyle = vig;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
       rafId = requestAnimationFrame(loop);
     };
 
@@ -746,14 +839,59 @@ export default function App() {
       </AnimatePresence>
 
       {/* --- HUD --- */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-none">
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
         <div className="flex justify-end items-center gap-3 text-white shadow-2xl">
           <TimerIcon className="w-5 h-5" />
           <span className="font-bold tracking-widest font-mono">
             {String(uiState.score).padStart(3, '0')}s
           </span>
         </div>
+        
+        {/* Critical State Warning */}
+        <AnimatePresence>
+          {uiState.intensity < 20 && !uiState.gameOver && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="text-[10px] font-black text-red-500 uppercase tracking-[0.3em] animate-pulse"
+            >
+              Fire is dying!
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* --- Resources Section --- */}
+      {!uiState.gameOver && (
+        <div className="absolute bottom-20 left-6 right-6 flex justify-between pointer-events-none">
+          {/* Sticks */}
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Sticks</span>
+            <div className="flex gap-1">
+              {[...Array(MAX_STICKS)].map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`w-1 h-3 rounded-full transition-colors ${i < uiState.sticks ? 'bg-orange-400' : 'bg-white/10'}`} 
+                />
+              ))}
+            </div>
+          </div>
+          
+          {/* Logs */}
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Logs</span>
+            <div className="flex gap-1.5">
+              {[...Array(MAX_LOGS)].map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`w-3 h-3 rounded-sm transition-colors ${i < uiState.logs ? 'bg-[#5d4037]' : 'bg-white/10'}`} 
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/** Oxygen */}
       <div className="absolute bottom-10 left-6 right-6 flex gap-4 pointer-events-none">
@@ -782,10 +920,36 @@ export default function App() {
         </button>
       </div>
 
-      {/** State log */}
-      <div className="absolute bottom-80 left-1/2 -translate-x-1/2 ">
+      {/** State log / Events */}
+      <div className="absolute bottom-80 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
         <AnimatePresence mode="wait">
-            {uiState.wind !== 0 && (
+            {uiState.currentEvent !== 'NONE' ? (
+              <motion.div 
+                key={uiState.currentEvent}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className={`flex items-center gap-3 backdrop-blur-md px-6 py-2.5 rounded-full border shadow-2xl pointer-events-none
+                  ${uiState.currentEvent === 'WIND_GUST' ? 'bg-sky-500/20 border-sky-400/30' : 
+                    uiState.currentEvent === 'DAMP_WOOD' ? 'bg-stone-500/20 border-stone-400/30' : 
+                    'bg-emerald-500/20 border-emerald-400/30'}`}
+              >
+                {uiState.currentEvent === 'WIND_GUST' && <Wind className="w-5 h-5 text-sky-400" />}
+                {uiState.currentEvent === 'DAMP_WOOD' && <LogIcon className="w-5 h-5 text-stone-400" />}
+                {uiState.currentEvent === 'PERFECT_AIR' && <Flame className="w-5 h-5 text-emerald-400" />}
+                
+                <div className="flex flex-col">
+                  <span className="text-xs font-black text-white uppercase tracking-widest">
+                    {uiState.currentEvent.replace('_', ' ')}
+                  </span>
+                  <span className="text-[8px] text-white/60 font-bold uppercase tracking-tight">
+                    {uiState.currentEvent === 'WIND_GUST' ? 'Intensity Penalty / Oxygen Boost' :
+                     uiState.currentEvent === 'DAMP_WOOD' ? 'Reduced Fuel Efficiency' :
+                     'High Efficiency Burn'}
+                  </span>
+                </div>
+              </motion.div>
+            ) : uiState.wind !== 0 && (
               <motion.div 
                 key={uiState.wind}
                 initial={{ opacity: 0, scale: 0.8 }}
