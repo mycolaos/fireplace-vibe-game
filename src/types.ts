@@ -5,6 +5,8 @@
 
 export type GameEvent = 'NONE' | 'WIND_GUST' | 'DAMP_WOOD' | 'PERFECT_AIR';
 
+export type WeatherType = 'CLEAR' | 'WINDY' | 'RAINY' | 'SNOWY';
+
 export interface Particle {
   x: number;
   y: number;
@@ -12,7 +14,7 @@ export interface Particle {
   vy: number;
   size: number;
   life: number; // 0 to 1
-  type: 'fire' | 'smoke';
+  type: 'fire' | 'smoke' | 'rain' | 'snow';
   color: string;
 }
 
@@ -55,6 +57,7 @@ export interface UIState {
   oxygen: number;
   smoke: number;
   wind: number;
+  weather: WeatherType;
   gameOver: boolean;
   sticks: number;
   logs: number;

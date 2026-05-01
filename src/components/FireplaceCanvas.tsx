@@ -13,9 +13,11 @@ import {
   MAX_LOGS, 
   STICK_REGEN_TIME, 
   LOG_REGEN_TIME,
-  DIFFICULTY_INCREMENT
+  DIFFICULTY_INCREMENT,
+  WEATHER_CHANGE_INTERVAL,
+  WEATHER_CONFIG
 } from '../constants';
-import { GameEvent, UIState, Star, Firefly, Tree } from '../types';
+import { GameEvent, UIState, Star, Firefly, Tree, WeatherType } from '../types';
 import { fireAudio } from '../services/audioService';
 import { spawnParticle, updateParticles } from '../services/particleService';
 import * as renderer from '../services/rendererService';
@@ -90,9 +92,17 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         state.current.score = Math.floor(totalTime);
         
         // Intensity decay gets faster as time goes on (difficulty scaling)
-        state.current.decayRate = INTENSITY_DECAY_BASE + Math.floor(totalTime / 10) * DIFFICULTY_INCREMENT;
+        const weatherMod = WEATHER_CONFIG[state.current.weather].fuelDecay;
+        state.current.decayRate = (INTENSITY_DECAY_BASE + Math.floor(totalTime / 10) * DIFFICULTY_INCREMENT) * weatherMod;
 
-        // --- 2. RESOURCE REGENERATION ---
+        // --- 2. WEATHER SYSTEM ---
+        if (time > state.current.nextWeatherTime) {
+          const weathers: WeatherType[] = ['CLEAR', 'WINDY', 'RAINY', 'SNOWY'];
+          state.current.weather = weathers[Math.floor(Math.random() * weathers.length)];
+          state.current.nextWeatherTime = time + WEATHER_CHANGE_INTERVAL;
+        }
+
+        // --- 3. RESOURCE REGENERATION ---
         if (state.current.sticks < MAX_STICKS) {
           state.current.stickTimer += dt * 1000;
           if (state.current.stickTimer >= STICK_REGEN_TIME) {
@@ -122,14 +132,15 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
           state.current.nextEventTime = time + 8000 + Math.random() * 7000;
         }
 
-        // Specific event logic modifiers
-        if (state.current.currentEvent === 'WIND_GUST') {
-          state.current.oxygen += 15 * dt; // Wind feeds the fire but can scatter embers
-          state.current.intensity -= 0.5 * dt;
-          if (Math.random() > 0.95) state.current.wind = (Math.random() > 0.5 ? 1 : -1);
-        } else if (state.current.currentEvent === 'PERFECT_AIR') {
-          state.current.oxygen = Math.min(100, state.current.oxygen + 10 * dt);
-        }
+      // Specific event logic modifiers
+      if (state.current.currentEvent === 'WIND_GUST' || state.current.weather === 'WINDY') {
+        const factor = state.current.currentEvent === 'WIND_GUST' ? 1.0 : 0.4;
+        state.current.oxygen += 10 * factor * dt; // Wind feeds the fire but can scatter embers
+        state.current.intensity -= 0.3 * factor * dt;
+        if (Math.random() > 0.98) state.current.wind = (Math.random() > 0.5 ? 1 : -1);
+      } else if (state.current.currentEvent === 'PERFECT_AIR') {
+        state.current.oxygen = Math.min(100, state.current.oxygen + 10 * dt);
+      }
 
         // Normal wind fluctuation
         if (state.current.currentEvent === 'NONE' && time > state.current.nextWindChange) {
@@ -148,9 +159,10 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         if (state.current.smoke > 40) state.current.oxygen -= 12 * dt;
         state.current.oxygen = Math.max(0, Math.min(100, state.current.oxygen));
 
-        // Interaction between Oxygen and Intensity
-        if (state.current.oxygen < 30) state.current.intensity -= 2.0 * dt; // Choking
-        else if (state.current.oxygen > 60) state.current.intensity += 0.3 * dt; // Thriving
+      // Interaction between Oxygen and Intensity
+      const stabilityMod = WEATHER_CONFIG[state.current.weather].tempStability;
+      if (state.current.oxygen < 30) state.current.intensity -= (2.0 / stabilityMod) * dt; // Choking
+      else if (state.current.oxygen > 60) state.current.intensity += 0.3 * stabilityMod * dt; // Thriving
 
         // Apply decay to Intensity
         let effectiveDecay = state.current.decayRate;
@@ -188,11 +200,15 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
       renderer.drawSky(ctx, canvas.width, horizonY);
       renderer.drawGround(ctx, canvas.width, canvas.height, horizonY);
       renderer.drawMoon(ctx, canvas.width, canvas.height);
-      renderer.drawStars(ctx, state.current.stars, canvas.width, horizonY, time);
+      if (state.current.weather === 'CLEAR' || state.current.weather === 'WINDY') {
+        renderer.drawStars(ctx, state.current.stars, canvas.width, horizonY, time);
+      }
       renderer.drawDunes(ctx, canvas.width, horizonY);
       renderer.drawCabin(ctx, canvas.width, horizonY, time);
       renderer.drawTrees(ctx, state.current.trees, canvas.width, horizonY, time);
       
+      renderer.drawWeatherOverlay(ctx, state.current.weather, canvas.width, canvas.height);
+
       // Fire Glow (Ground and Air illumination)
       renderer.drawGlow(ctx, centerX, centerY, state.current.intensity, canvas.width, canvas.height);
       
@@ -201,14 +217,27 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
       // Render Wood and update life cycles
       state.current.woods = renderer.drawWoods(ctx, state.current.woods, dt, state.current.intensity, time);
 
-      // --- EMITTER SYSTEM: Particles (Fire & Smoke) ---
-      if (!state.current.gameOver && state.current.intensity > 0) {
-        const pCount = Math.floor(state.current.intensity / 20) + 1;
-        for (let i = 0; i < pCount; i++) {
-          state.current.particles.push(spawnParticle('fire', centerX + (Math.random() - 0.5) * 30, centerY, state.current.wind, state.current.intensity));
+      // --- EMITTER SYSTEM: Particles (Fire, Smoke, & Weather) ---
+      if (!state.current.gameOver) {
+        if (state.current.intensity > 0) {
+          const pCount = Math.floor(state.current.intensity / 20) + 1;
+          for (let i = 0; i < pCount; i++) {
+            state.current.particles.push(spawnParticle('fire', centerX + (Math.random() - 0.5) * 30, centerY, state.current.wind, state.current.intensity));
+          }
+          if (state.current.smoke > 10 && Math.random() < state.current.smoke / 200) {
+            state.current.particles.push(spawnParticle('smoke', centerX + (Math.random() - 0.5) * 40, centerY - 20, state.current.wind, state.current.intensity));
+          }
         }
-        if (state.current.smoke > 10 && Math.random() < state.current.smoke / 200) {
-          state.current.particles.push(spawnParticle('smoke', centerX + (Math.random() - 0.5) * 40, centerY - 20, state.current.wind, state.current.intensity));
+
+        // Spawn Weather Particles
+        if (state.current.weather === 'RAINY') {
+          for (let i = 0; i < 5; i++) {
+            state.current.particles.push(spawnParticle('rain', Math.random() * canvas.width, -10, state.current.wind, state.current.intensity));
+          }
+        } else if (state.current.weather === 'SNOWY') {
+          if (Math.random() > 0.6) {
+             state.current.particles.push(spawnParticle('snow', Math.random() * canvas.width, -10, state.current.wind, state.current.intensity));
+          }
         }
       }
       

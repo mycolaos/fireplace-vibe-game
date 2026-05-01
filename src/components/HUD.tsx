@@ -5,38 +5,64 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Wind, Timer as TimerIcon, Logs as LogIcon, Flame } from 'lucide-react';
+import { Wind, Timer as TimerIcon, Logs as LogIcon, Flame, CloudRain, Snowflake, Sun, CloudFog } from 'lucide-react';
 import { UIState } from '../types';
-import { MAX_STICKS, MAX_LOGS } from '../constants';
+import { MAX_STICKS, MAX_LOGS, WEATHER_CONFIG } from '../constants';
 
 interface HUDProps {
   uiState: UIState;
 }
 
 export const HUD: React.FC<HUDProps> = ({ uiState }) => {
+  const WeatherIcon = {
+    CLEAR: Sun,
+    WINDY: Wind,
+    RAINY: CloudRain,
+    SNOWY: Snowflake,
+  }[uiState.weather] || Sun;
+
   return (
     <>
-      {/* --- Score & Warning --- */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
-        <div className="flex justify-end items-center gap-3 text-white shadow-2xl">
-          <TimerIcon className="w-5 h-5" />
-          <span className="font-bold tracking-widest font-mono">
-            {String(uiState.score)}
-          </span>
+      {/* --- Score, Warning & Weather --- */}
+      <div className="absolute top-6 left-6 right-6 flex justify-between items-start pointer-events-none">
+        {/* Left: Weather Status */}
+        <motion.div 
+          key={uiState.weather}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex flex-col gap-1 backdrop-blur-md px-3 py-2 rounded-2xl border border-white/10 bg-black/20"
+        >
+          <div className="flex items-center gap-2 text-white">
+            <WeatherIcon className={`w-4 h-4 ${uiState.weather === 'RAINY' ? 'text-blue-400' : uiState.weather === 'SNOWY' ? 'text-sky-100' : uiState.weather === 'WINDY' ? 'text-sky-300' : 'text-yellow-400'}`} />
+            <span className="text-[10px] font-black uppercase tracking-widest">{uiState.weather}</span>
+          </div>
+          <div className="text-[8px] font-bold text-white/40 uppercase tracking-tighter">
+            {WEATHER_CONFIG[uiState.weather].fuelDecay}x Decay rate
+          </div>
+        </motion.div>
+
+        {/* Center: Score */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+          <div className="flex justify-end items-center gap-3 text-white shadow-2xl">
+            <TimerIcon className="w-5 h-5 text-orange-200/50" />
+            <span className="font-bold tracking-widest font-mono text-xl">
+              {String(uiState.score)}
+            </span>
+          </div>
+          
+          <AnimatePresence>
+            {uiState.intensity < 20 && !uiState.gameOver && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="text-[10px] text-center font-black text-red-500 tracking-[0.3em] uppercase animate-pulse"
+              >
+                The embers are cooling
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-        
-        <AnimatePresence>
-          {uiState.intensity < 20 && !uiState.gameOver && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="text-xs text-center font-black text-red-500 tracking-[0.3em] animate-pulse"
-            >
-              The embers are cooling
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* --- Resources --- */}

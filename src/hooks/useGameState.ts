@@ -15,7 +15,7 @@ import {
   LOG_REGEN_TIME,
   DIFFICULTY_INCREMENT
 } from '../constants';
-import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree } from '../types';
+import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree, WeatherType } from '../types';
 
 export function useGameState() {
   const state = useRef({
@@ -41,6 +41,8 @@ export function useGameState() {
     currentEvent: 'NONE' as GameEvent,
     eventEndTime: 0,
     nextEventTime: performance.now() + 8000,
+    weather: 'CLEAR' as WeatherType,
+    nextWeatherTime: performance.now() + 20000,
   });
 
   const [uiState, setUiState] = useState<UIState>({
@@ -49,6 +51,7 @@ export function useGameState() {
     oxygen: 100,
     smoke: 0,
     wind: 0,
+    weather: 'CLEAR',
     gameOver: false,
     sticks: MAX_STICKS,
     logs: MAX_LOGS,
@@ -62,6 +65,7 @@ export function useGameState() {
       oxygen: state.current.oxygen,
       smoke: state.current.smoke,
       wind: state.current.wind,
+      weather: state.current.weather,
       gameOver: state.current.gameOver,
       sticks: state.current.sticks,
       logs: state.current.logs,
@@ -92,6 +96,8 @@ export function useGameState() {
       currentEvent: 'NONE',
       eventEndTime: 0,
       nextEventTime: now + 8000,
+      weather: 'CLEAR',
+      nextWeatherTime: now + 20000,
     };
     updateUI();
   }, [updateUI]);

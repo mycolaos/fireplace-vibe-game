@@ -155,6 +155,46 @@ export const drawGlow = (ctx: CanvasRenderingContext2D, centerX: number, centerY
   ctx.globalCompositeOperation = 'source-over';
 };
 
+export const drawWeatherOverlay = (ctx: CanvasRenderingContext2D, weather: string, width: number, height: number) => {
+  if (weather === 'CLEAR') return;
+
+  ctx.save();
+  if (weather === 'WINDY') {
+    // Subtle horizontal streaks or dust
+    ctx.fillStyle = 'rgba(200, 200, 200, 0.05)';
+    for (let i = 0; i < 5; i++) {
+        ctx.fillRect(0, Math.random() * height, width, 2);
+    }
+  } else if (weather === 'RAINY') {
+    // Gloomy blueish overlay
+    const gloom = ctx.createLinearGradient(0, 0, 0, height);
+    gloom.addColorStop(0, 'rgba(30, 40, 80, 0.2)');
+    gloom.addColorStop(1, 'rgba(10, 15, 30, 0.4)');
+    ctx.fillStyle = gloom;
+    ctx.fillRect(0, 0, width, height);
+
+    // Fog at horizon
+    const fog = ctx.createLinearGradient(0, height * 0.4, 0, height * 0.6);
+    fog.addColorStop(0, 'rgba(0,0,0,0)');
+    fog.addColorStop(0.5, 'rgba(100, 110, 140, 0.2)');
+    fog.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, height * 0.4, width, height * 0.2);
+  } else if (weather === 'SNOWY') {
+    // Colder, whiteish overlay
+    ctx.fillStyle = 'rgba(200, 230, 255, 0.1)';
+    ctx.fillRect(0, 0, width, height);
+
+    // Thick fog 
+    const snowFog = ctx.createRadialGradient(width/2, height*0.6, 0, width/2, height*0.6, width);
+    snowFog.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+    snowFog.addColorStop(1, 'rgba(200, 220, 255, 0.2)');
+    ctx.fillStyle = snowFog;
+    ctx.fillRect(0, 0, width, height);
+  }
+  ctx.restore();
+};
+
 export const drawWoods = (ctx: CanvasRenderingContext2D, woods: Wood[], dt: number, intensity: number, time: number) => {
   const centerX = ctx.canvas.width / 2;
   const gravity = 1200; // pixels per second squared
