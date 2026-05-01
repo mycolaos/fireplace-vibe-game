@@ -135,6 +135,7 @@ interface Wood {
   type: 'stick' | 'log';
   rotation: number;
   life: number;
+  isBurning: boolean;
 }
 
 export default function App() {
@@ -281,27 +282,55 @@ export default function App() {
     // Perfect Timing Bonus
     const timingBonus = (state.current.oxygen > 40 && state.current.oxygen < 70) ? 1.25 : 1.0;
     
+    // Spatial Bonus (Positioning)
+    const canvas = canvasRef.current;
+    let spatialBonus = 1.0;
+    if (canvas) {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height * 0.75;
+      const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+      
+      // Dynamic range based on fire state
+      // Matches the base spread (+/- 15px) plus particle size
+      const fireRadius = 15 + (state.current.intensity * 0.4);
+      
+      if (dist > fireRadius) {
+        spatialBonus = 0; // Sticks or logs out of range shouldn't burn
+      } else {
+        // bonus from 1.0 (at boundary) up to 1.5 (at center)
+        spatialBonus = Math.max(1.0, 1.5 - (dist / (fireRadius * 2))); 
+      }
+    }
+
     if (type === 'stick') {
       state.current.sticks--;
-      state.current.intensity = Math.min(MAX_INTENSITY, state.current.intensity + 8 * fireGainMult * timingBonus * fuelEfficiency);
-      state.current.smoke += state.current.currentEvent === 'DAMP_WOOD' ? 12 : 5;
+      const isBurning = spatialBonus > 0;
+      if (isBurning) {
+        state.current.intensity = Math.min(MAX_INTENSITY, state.current.intensity + 8 * fireGainMult * timingBonus * fuelEfficiency * spatialBonus);
+        state.current.smoke += state.current.currentEvent === 'DAMP_WOOD' ? 12 : 5;
+      }
       state.current.woods.push({
         x: x + (Math.random() - 0.5) * 20,
         y: y + (Math.random() - 0.5) * 20,
         type: 'stick',
         rotation: Math.random() * Math.PI,
-        life: 1.0
+        life: 1.0,
+        isBurning
       });
     } else {
       state.current.logs--;
-      state.current.intensity = Math.min(MAX_INTENSITY, state.current.intensity + 22 * fireGainMult * timingBonus * fuelEfficiency);
-      state.current.smoke += state.current.currentEvent === 'DAMP_WOOD' ? 35 : 22; 
+      const isBurning = spatialBonus > 0;
+      if (isBurning) {
+        state.current.intensity = Math.min(MAX_INTENSITY, state.current.intensity + 22 * fireGainMult * timingBonus * fuelEfficiency * spatialBonus);
+        state.current.smoke += state.current.currentEvent === 'DAMP_WOOD' ? 35 : 22; 
+      }
       state.current.woods.push({
         x: x + (Math.random() - 0.5) * 40,
         y: y + (Math.random() - 0.5) * 40,
         type: 'log',
         rotation: Math.random() * Math.PI,
-        life: 1.0
+        life: 1.0,
+        isBurning
       });
     }
   }, []);
@@ -675,14 +704,37 @@ export default function App() {
 
       // Draw Wood
       state.current.woods = state.current.woods.filter(w => {
-        w.life -= 0.05 * dt;
+        const decayRate = w.isBurning ? 0.15 : 0.05;
+        w.life -= decayRate * dt;
+        
         ctx.save();
         ctx.translate(w.x, w.y);
         ctx.rotate(w.rotation);
+        
+        // Base Wood Color
         ctx.fillStyle = w.type === 'log' ? '#5d4037' : '#8d6e63';
+        
+        // Glow Effect for Burning Wood
+        if (w.isBurning) {
+          const pulsate = Math.sin(time * 0.01 + w.x) * 0.2 + 0.8;
+          ctx.shadowBlur = 10 * pulsate * w.life;
+          ctx.shadowColor = '#ff5500';
+          // Ember logic: color shifts to glowing orange as it burns
+          ctx.fillStyle = `rgb(${80 + 175 * pulsate}, ${40 + 80 * pulsate}, 20)`;
+        }
+
         const w_width = w.type === 'log' ? 40 : 20;
         const w_height = w.type === 'log' ? 12 : 5;
         ctx.fillRect(-w_width / 2, -w_height / 2, w_width, w_height);
+        
+        // Embers/Sparks on burning wood
+        if (w.isBurning && Math.random() > 0.95) {
+           const sx = (Math.random() - 0.5) * w_width;
+           const sy = (Math.random() - 0.5) * w_height;
+           ctx.fillStyle = '#fff';
+           ctx.fillRect(sx, sy, 2, 2);
+        }
+
         ctx.restore();
         return w.life > 0 || state.current.intensity > 0;
       });
@@ -799,14 +851,23 @@ export default function App() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Center spawn since logic focuses on main fire area
-    const spawnX = canvas.width / 2;
-    const spawnY = canvas.height * 0.75;
+    let clientX, clientY;
+    if ('changedTouches' in e) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else {
+      clientX = (e as React.MouseEvent).clientX;
+      clientY = (e as React.MouseEvent).clientY;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
 
     if (duration > 600) {
-      handleInteraction('log', spawnX, spawnY);
+      handleInteraction('log', x, y);
     } else {
-      handleInteraction('stick', spawnX, spawnY);
+      handleInteraction('stick', x, y);
     }
 
     setIsPressing(false);
