@@ -46,7 +46,12 @@ export const GameOver: React.FC<GameOverProps> = ({ uiState, highScore, onRestar
               </div>
             </div>
             
-            <div className="flex flex-col gap-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.2 }}
+              className="flex flex-col gap-4"
+            >
               <button 
                 onClick={(e) => { e.stopPropagation(); onRestart(CYCLE_START_NIGHT); }}
                 className="group relative px-10 py-4 bg-white text-black font-bold rounded-2xl flex items-center justify-center gap-3 mx-auto transition-all hover:scale-105 active:scale-95 cursor-pointer w-64"
@@ -63,7 +68,7 @@ export const GameOver: React.FC<GameOverProps> = ({ uiState, highScore, onRestar
                 <span>Begin at Dusk</span>
                 <Sunrise className="w-5 h-5" />
               </button>
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}
