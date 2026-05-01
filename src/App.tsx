@@ -144,6 +144,7 @@ export default function App() {
     lastTick: 0,
     particles: [] as Particle[],
     woods: [] as Wood[],
+    stars: [] as { x: number, y: number, size: number, phase: number }[],
     gameOver: false,
     startTime: 0,
     nextWindChange: 0,
@@ -289,6 +290,19 @@ export default function App() {
     state.current.startTime = performance.now();
     state.current.nextWindChange = performance.now() + 5000 + Math.random() * 5000;
 
+    // Initialize Stars
+    const starCount = 150;
+    const newStars = [];
+    for (let i = 0; i < starCount; i++) {
+      newStars.push({
+        x: Math.random(),
+        y: Math.random() * 0.7, // Top 70% of sky
+        size: 0.5 + Math.random() * 1.5,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+    state.current.stars = newStars;
+
     let rafId: number;
 
     const loop = (time: number) => {
@@ -365,21 +379,66 @@ export default function App() {
       // --- Rendering ---
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Background (gradient night)
-      const bgGrade = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height / 2 + 50, 
-        20, 
-        canvas.width / 2, canvas.height / 2 + 50, 
-        300 + state.current.intensity * 2
-      );
-      const intensityNorm = state.current.intensity / 100;
-      bgGrade.addColorStop(0, `rgba(40, 20, 10, ${intensityNorm * 0.3})`);
-      bgGrade.addColorStop(1, 'rgba(10, 10, 15, 1)');
-      ctx.fillStyle = bgGrade;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2 + 80;
+
+      // 1. Sky Gradient (Deep Midnight)
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      skyGradient.addColorStop(0, '#020205');
+      skyGradient.addColorStop(0.5, '#0a0a1a');
+      skyGradient.addColorStop(1, '#1a0f1f');
+      ctx.fillStyle = skyGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2 + 50;
+      // 2. Stars (with twinkle)
+      ctx.fillStyle = 'white';
+      state.current.stars.forEach(s => {
+        const twinkle = Math.sin(time * 0.002 + s.phase) * 0.5 + 0.5;
+        ctx.globalAlpha = 0.3 + twinkle * 0.7;
+        ctx.beginPath();
+        ctx.arc(s.x * canvas.width, s.y * canvas.height, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1.0;
+
+      // 3. Distant Dunes Silhouette
+      const drawDune = (height: number, color: string, offset: number) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height);
+        for(let x = 0; x <= canvas.width; x += 10) {
+          const y = canvas.height - height + Math.sin(x * 0.005 + offset) * 20;
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.fill();
+      };
+      drawDune(120, '#0a0514', 1); // Furthest
+      drawDune(80, '#0d071a', 5);  // Mid
+
+      // 4. Ground / Near Dune
+      ctx.fillStyle = '#0f0a1c';
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY + 20, 600, 150, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 5. Fire Glow (Illuminating the landscape)
+      const intensityNorm = state.current.intensity / 100;
+      const bgGrade = ctx.createRadialGradient(
+        centerX, centerY, 
+        10, 
+        centerX, centerY, 
+        150 + state.current.intensity * 3.5
+      );
+      
+      bgGrade.addColorStop(0, `rgba(255, 120, 40, ${intensityNorm * 0.25})`);
+      bgGrade.addColorStop(0.4, `rgba(180, 60, 20, ${intensityNorm * 0.15})`);
+      bgGrade.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = bgGrade;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = 'source-over';
 
       // Draw Wood
       state.current.woods = state.current.woods.filter(w => {
@@ -455,7 +514,7 @@ export default function App() {
 
     // Center spawn since logic focuses on main fire area
     const spawnX = canvas.width / 2;
-    const spawnY = canvas.height / 2 + 50;
+    const spawnY = canvas.height / 2 + 80;
 
     if (duration > 600) {
       handleInteraction('log', spawnX, spawnY);
