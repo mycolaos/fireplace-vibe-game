@@ -87,7 +87,7 @@ export const HUD: React.FC<HUDProps> = ({ uiState }) => {
       </div>
 
       {/* --- Events & Wind --- */}
-      <div className="absolute bottom-80 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-3">
         <AnimatePresence mode="wait">
           {uiState.currentEvent !== 'NONE' ? (
             <motion.div 
