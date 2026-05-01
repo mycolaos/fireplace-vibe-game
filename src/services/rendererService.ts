@@ -299,6 +299,10 @@ export const drawWoods = (ctx: CanvasRenderingContext2D, woods: Wood[], dt: numb
     ctx.save();
     ctx.translate(w.x, w.y);
     ctx.rotate(w.rotation);
+    
+    // Add fade out as wood decays
+    ctx.globalAlpha = Math.max(0, Math.min(1, w.life * 3));
+    
     ctx.fillStyle = w.type === 'log' ? '#5d4037' : '#8d6e63';
     
     if (w.isBurning) {
@@ -308,8 +312,10 @@ export const drawWoods = (ctx: CanvasRenderingContext2D, woods: Wood[], dt: numb
       ctx.fillStyle = `rgb(${80 + 175 * pulsate}, ${40 + 80 * pulsate}, 20)`;
     }
 
-    const w_width = w.type === 'log' ? 40 : 20;
-    const w_height = w.type === 'log' ? 12 : 5;
+    // Shrink slightly as it decays
+    const sizeMod = 0.8 + 0.2 * Math.max(0, w.life);
+    const w_width = (w.type === 'log' ? 40 : 20) * sizeMod;
+    const w_height = (w.type === 'log' ? 12 : 5) * sizeMod;
     ctx.fillRect(-w_width / 2, -w_height / 2, w_width, w_height);
     
     if (w.isBurning && Math.random() > 0.95) {
@@ -319,6 +325,6 @@ export const drawWoods = (ctx: CanvasRenderingContext2D, woods: Wood[], dt: numb
        ctx.fillRect(sx, sy, 2, 2);
     }
     ctx.restore();
-    return w.life > 0 || intensity > 0;
+    return w.life > 0;
   });
 };
