@@ -746,10 +746,10 @@ export default function App() {
       </AnimatePresence>
 
       {/* --- HUD --- */}
-      <div className="absolute bottom-6 left-6 flex flex-col gap-4 pointer-events-none">
-        <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 shadow-2xl">
-          <TimerIcon className="w-5 h-5 text-sky-400" />
-          <span className="text-2xl font-bold text-white tracking-widest font-mono">
+      <div className="absolute top-25 right-6 flex flex-col gap-4 pointer-events-none">
+        <div className="flex justify-end items-center gap-3 text-white shadow-2xl">
+          <TimerIcon className="w-5 h-5" />
+          <span className="font-bold tracking-widest font-mono">
             {String(uiState.score).padStart(3, '0')}s
           </span>
         </div>
@@ -766,23 +766,6 @@ export default function App() {
                 transition={{ type: 'spring', stiffness: 50 }}
               />
            </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-           <div className="flex items-center justify-between px-1">
-             <span className="text-[10px] uppercase font-bold text-white/40 tracking-tighter">Fire Intensity</span>
-             <Flame className={`w-4 h-4 ${uiState.intensity > 70 ? 'text-white' : uiState.intensity > 30 ? 'text-orange-400' : 'text-red-500'} animate-pulse`} />
-           </div>
-           <div className="w-48 h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
-              <motion.div 
-                className="h-full bg-gradient-to-r from-red-600 via-orange-500 to-yellow-300" 
-                animate={{ width: `${uiState.intensity}%` }}
-                transition={{ type: 'spring', stiffness: 50 }}
-              />
-           </div>
-           {uiState.oxygen > 40 && uiState.oxygen < 70 && (
-             <span className="text-[8px] text-yellow-200/50 uppercase font-black tracking-widest animate-pulse">Sweet Spot: +25% Gain</span>
-           )}
         </div>
 
         {uiState.smoke > 20 && (
