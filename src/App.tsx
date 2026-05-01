@@ -735,8 +735,8 @@ export default function App() {
             exit={{ opacity: 0, y: 10, scale: 0.9 }}
             className="absolute z-50 pointer-events-none backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded bg-black/40 border border-white/10 shadow-lg whitespace-nowrap"
             style={{ 
-              left: '80%', 
-              top: '50%',
+              right: '10%', 
+              top: '40%',
               transform: 'translate(-50%, -100%)'
             }}
           >
@@ -758,9 +758,10 @@ export default function App() {
       {/** Oxygen */}
       <div className="absolute bottom-10 left-6 right-6 flex gap-4 pointer-events-none">
         <div className="w-full flex flex-col gap-2">
-           <div className="flex items-center justify-between px-1">
-             <span className="text-[10px] uppercase font-bold text-sky-400/60 tracking-tighter">Oxygen</span>
+           <div className="flex items-center px-1 text-[10px]">
+             <span className="uppercase font-bold text-sky-400/60 tracking-tighter">Oxygen</span>
              <Wind className="w-3 h-3 text-sky-400" />
+             {uiState.smoke > 20 &&  <span className="ml-auto text-gray-300">Smoke Level: {Math.floor(uiState.smoke)}%</span>}
            </div>
            <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
               <motion.div 
@@ -770,17 +771,6 @@ export default function App() {
               />
            </div>
         </div>
-
-        {uiState.smoke > 20 && (
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-2 text-gray-400 text-xs font-medium bg-black/20 px-3 py-1 rounded-full w-fit"
-          >
-            <div className="w-2 h-2 rounded-full bg-gray-500 animate-pulse" />
-            <span>Smoke Level: {Math.floor(uiState.smoke)}%</span>
-          </motion.div>
-        )}
       </div>
 
       <div className="absolute top-6 right-6 flex items-center gap-3">
@@ -790,45 +780,26 @@ export default function App() {
         >
           {isMuted ? <VolumeX className="w-5 h-5 text-red-400" /> : <Volume2 className="w-5 h-5 text-white" />}
         </button>
-
-        <AnimatePresence mode="wait">
-          {uiState.wind !== 0 && (
-            <motion.div 
-              key={uiState.wind}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center gap-2 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/10 pointer-events-none"
-            >
-              <Wind className={`w-5 h-5 text-sky-300 ${uiState.wind === -1 ? 'rotate-180' : ''}`} />
-              <span className="text-xs font-bold text-white/80">
-                {uiState.wind === 1 ? 'East Breeze' : 'West Breeze'}
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* --- Controls Info --- */}
-      <div className="absolute top-35 right-6 flex flex-col items-center gap-4 pointer-events-none">        
-        {!uiState.gameOver && (
-          <div className="flex flex-col items-center gap-6">
-            <div className="flex gap-8 opacity-40 hover:opacity-100 transition-opacity">
-              <div className="flex flex-col items-center gap-1">
-                <div className="w-8 h-8 rounded-lg border-2 border-white/20 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                </div>
-                <span className="text-[9px] text-white uppercase font-bold tracking-widest">Stick</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="w-8 h-8 rounded-lg border-2 border-white/20 flex items-center justify-center group overflow-hidden">
-                  <div className="w-4 h-full bg-white/20" />
-                </div>
-                <span className="text-[9px] text-white uppercase font-bold tracking-widest">Hold for Log</span>
-              </div>
-            </div>
-          </div>
-        )}
+      {/** State log */}
+      <div className="absolute bottom-80 left-1/2 -translate-x-1/2 ">
+        <AnimatePresence mode="wait">
+            {uiState.wind !== 0 && (
+              <motion.div 
+                key={uiState.wind}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex items-center gap-2 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/10 pointer-events-none"
+              >
+                <Wind className={`w-5 h-5 text-sky-300 ${uiState.wind === -1 ? 'rotate-180' : ''}`} />
+                <span className="text-xs font-bold text-white/80">
+                  {uiState.wind === 1 ? 'East Breeze' : 'West Breeze'}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
       </div>
 
       {/* --- Controls--- */}
