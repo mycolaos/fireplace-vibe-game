@@ -401,6 +401,32 @@ export default function App() {
       });
       ctx.globalAlpha = 1.0;
 
+      // 2.5 Portal Ring (Purple Ring in the sky)
+      const portalX = canvas.width * 0.75;
+      const portalY = canvas.height * 0.2;
+      const portalRadius = 35;
+      
+      ctx.save();
+      // Outer Glow
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = '#a855f7';
+      ctx.strokeStyle = '#d8b4fe';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 12]);
+      ctx.lineDashOffset = -time * 0.05;
+      
+      ctx.beginPath();
+      ctx.arc(portalX, portalY, portalRadius + Math.sin(time * 0.003) * 2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner subtle glow
+      const portalGlow = ctx.createRadialGradient(portalX, portalY, 0, portalX, portalY, portalRadius);
+      portalGlow.addColorStop(0, 'rgba(168, 85, 247, 0.2)');
+      portalGlow.addColorStop(1, 'rgba(168, 85, 247, 0)');
+      ctx.fillStyle = portalGlow;
+      ctx.fill();
+      ctx.restore();
+
       // 3. Distant Dunes Silhouette
       const drawDune = (height: number, color: string, offset: number) => {
         ctx.fillStyle = color;
