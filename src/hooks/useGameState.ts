@@ -19,7 +19,7 @@ import {
   WEATHER_CONFIG,
   DEFAULT_CYCLE_START
 } from '../constants';
-import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree, WeatherType } from '../types';
+import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree, WeatherType, Mountain, Cloud, Rock, Grass, Cactus, Comet } from '../types';
 
 export function useGameState() {
   const initialWeather: WeatherType = 'CLEAR';
@@ -35,6 +35,12 @@ export function useGameState() {
     stars: [] as Star[],
     fireflies: [] as Firefly[],
     trees: [] as Tree[],
+    mountains: [] as Mountain[],
+    clouds: [] as Cloud[],
+    rocks: [] as Rock[],
+    grass: [] as Grass[],
+    cacti: [] as Cactus[],
+    comet: { x: 0, y: 0, vx: 0, vy: 0, life: 0, active: false } as Comet,
     gameOver: false,
     startTime: 0,
     nextWindChange: 0,
@@ -47,6 +53,8 @@ export function useGameState() {
     eventEndTime: 0,
     nextEventTime: performance.now() + 8000,
     weather: initialWeather,
+    cloudDensity: (WEATHER_CONFIG[initialWeather] as any).clouds,
+    cloudAlpha: (WEATHER_CONFIG[initialWeather] as any).cloudLikelihood,
     nextWeatherTime: performance.now() + (WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION)) * WEATHER_CONFIG[initialWeather].durationMult,
     cycleProgress: DEFAULT_CYCLE_START,
     initialCycle: DEFAULT_CYCLE_START,
@@ -97,6 +105,12 @@ export function useGameState() {
       stars: [],
       fireflies: [],
       trees: [],
+      mountains: [],
+      clouds: [],
+      rocks: [],
+      grass: [],
+      cacti: [],
+      comet: { x: 0, y: 0, vx: 0, vy: 0, life: 0, active: false },
       gameOver: false,
       startTime: now,
       nextWindChange: now + 5000,
@@ -109,6 +123,8 @@ export function useGameState() {
       eventEndTime: 0,
       nextEventTime: now + 8000,
       weather: 'CLEAR',
+      cloudDensity: (WEATHER_CONFIG['CLEAR'] as any).clouds,
+      cloudAlpha: (WEATHER_CONFIG['CLEAR'] as any).cloudLikelihood,
       nextWeatherTime: now + (WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION)) * WEATHER_CONFIG['CLEAR'].durationMult,
       cycleProgress: initialCycle,
       initialCycle: initialCycle,

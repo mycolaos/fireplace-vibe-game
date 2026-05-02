@@ -51,6 +51,55 @@ export interface Tree {
   phase: number;
 }
 
+export interface Mountain {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+}
+
+export interface Cloud {
+  x: number;
+  y: number;
+  scale: number;
+  speed: number;
+  opacity: number;
+  threshold: number;
+  puffs: { dx: number; dy: number; radius: number }[];
+}
+
+export interface Rock {
+  x: number;
+  y: number;
+  size: number;
+  rotation: number;
+  color: string;
+}
+
+export interface Grass {
+  x: number;
+  y: number;
+  height: number;
+  phase: number;
+}
+
+export interface Cactus {
+  x: number;
+  y: number;
+  height: number;
+  rotation: number;
+}
+
+export interface Comet {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  active: boolean;
+}
+
 export interface UIState {
   score: number;
   intensity: number;

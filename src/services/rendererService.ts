@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Wood, Star, Firefly, Tree } from '../types';
+import { Wood, Star, Firefly, Tree, Mountain, Cloud, Rock, Grass, Cactus, Comet } from '../types';
 import { SKY_COLORS, MOON_POSITION_CONFIG } from '../constants';
 
 const hexToRgb = (hex: string) => {
@@ -138,6 +138,50 @@ export const drawDunes = (ctx: CanvasRenderingContext2D, width: number, horizonY
   drawDune(30, '#0d071a', 5);
 };
 
+export const drawMountains = (ctx: CanvasRenderingContext2D, mountains: Mountain[], width: number, horizonY: number) => {
+  mountains.forEach(m => {
+    ctx.fillStyle = m.color;
+    ctx.beginPath();
+    ctx.moveTo(m.x * width - m.width / 2, horizonY);
+    ctx.lineTo(m.x * width, horizonY - m.height);
+    ctx.lineTo(m.x * width + m.width / 2, horizonY);
+    ctx.fill();
+    
+    // Add a highlight on one side
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.beginPath();
+    ctx.moveTo(m.x * width - m.width / 2, horizonY);
+    ctx.lineTo(m.x * width, horizonY - m.height);
+    ctx.lineTo(m.x * width + m.width / 4, horizonY);
+    ctx.fill();
+  });
+};
+
+export const drawClouds = (ctx: CanvasRenderingContext2D, clouds: Cloud[], width: number, time: number, density: number, alpha: number) => {
+  clouds.forEach(c => {
+    // Only draw if within current density threshold
+    if (c.threshold > density) return;
+
+    // Smooth fade-in as density approaches threshold
+    const localDensityAlpha = Math.min(1, (density - c.threshold) * 5);
+    
+    const x = ((c.x * width) + (time * c.speed)) % (width + 400 * c.scale) - 200 * c.scale;
+    ctx.save();
+    ctx.globalAlpha = c.opacity * alpha * localDensityAlpha;
+    ctx.fillStyle = '#fff';
+    ctx.translate(x, c.y);
+    ctx.scale(c.scale, c.scale);
+    
+    ctx.beginPath();
+    c.puffs.forEach(p => {
+      ctx.moveTo(p.dx + p.radius, p.dy);
+      ctx.arc(p.dx, p.dy, p.radius, 0, Math.PI * 2);
+    });
+    ctx.fill();
+    ctx.restore();
+  });
+};
+
 export const drawCabin = (ctx: CanvasRenderingContext2D, width: number, horizonY: number, time: number) => {
   const cabinX = width * 0.8;
   const cabinY = horizonY - 15 + Math.sin(cabinX * 0.005 + 1) * 5;
@@ -167,6 +211,36 @@ export const drawCabin = (ctx: CanvasRenderingContext2D, width: number, horizonY
   ctx.shadowBlur = 0;
 };
 
+export const drawRocks = (ctx: CanvasRenderingContext2D, rocks: Rock[], width: number, horizonY: number) => {
+  rocks.forEach(r => {
+    ctx.save();
+    ctx.translate(r.x * width, horizonY + r.y);
+    ctx.rotate(r.rotation);
+    ctx.fillStyle = r.color;
+    
+    // Draw a jagged rock shape
+    ctx.beginPath();
+    ctx.moveTo(-r.size, 0);
+    ctx.lineTo(-r.size * 0.8, -r.size * 0.6);
+    ctx.lineTo(0, -r.size);
+    ctx.lineTo(r.size * 0.7, -r.size * 0.7);
+    ctx.lineTo(r.size, 0);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Lowlight
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.moveTo(0, -r.size);
+    ctx.lineTo(r.size * 0.7, -r.size * 0.7);
+    ctx.lineTo(r.size, 0);
+    ctx.lineTo(0, 0);
+    ctx.fill();
+    
+    ctx.restore();
+  });
+};
+
 export const drawTrees = (ctx: CanvasRenderingContext2D, trees: Tree[], width: number, horizonY: number, time: number) => {
   trees.forEach(t => {
     const sway = Math.sin(time * 0.001 + t.phase) * 0.05;
@@ -184,6 +258,24 @@ export const drawTrees = (ctx: CanvasRenderingContext2D, trees: Tree[], width: n
         ctx.lineTo(-levelWidth, levelY + 10);
         ctx.lineTo(levelWidth, levelY + 10);
         ctx.fill();
+    }
+    ctx.restore();
+  });
+};
+
+export const drawGrass = (ctx: CanvasRenderingContext2D, grass: Grass[], width: number, horizonY: number, time: number) => {
+  grass.forEach(g => {
+    const sway = Math.sin(time * 0.002 + g.phase) * 5;
+    ctx.save();
+    ctx.translate(g.x * width, horizonY + g.y);
+    ctx.strokeStyle = '#05020a';
+    ctx.lineWidth = 1.5;
+    
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * 3, 0);
+      ctx.quadraticCurveTo(i * 3 + sway * 0.5, -g.height * 0.5, i * 3 + sway, -g.height);
+      ctx.stroke();
     }
     ctx.restore();
   });
@@ -327,4 +419,45 @@ export const drawWoods = (ctx: CanvasRenderingContext2D, woods: Wood[], dt: numb
     ctx.restore();
     return w.life > 0;
   });
+};
+
+export const drawCacti = (ctx: CanvasRenderingContext2D, cacti: Cactus[], width: number, horizonY: number) => {
+  cacti.forEach(c => {
+    ctx.save();
+    ctx.translate(c.x * width, horizonY + c.y);
+    ctx.rotate(c.rotation);
+    ctx.fillStyle = '#05020a';
+    
+    // Main body
+    ctx.fillRect(-4, 0, 8, -c.height);
+    
+    // Left arm
+    ctx.fillRect(-4, -c.height * 0.6, -8, 4);
+    ctx.fillRect(-12, -c.height * 0.6, 4, -15);
+    
+    // Right arm
+    ctx.fillRect(4, -c.height * 0.4, 8, 4);
+    ctx.fillRect(8, -c.height * 0.4, 4, -20);
+    
+    ctx.restore();
+  });
+};
+
+export const drawComet = (ctx: CanvasRenderingContext2D, comet: Comet) => {
+  if (!comet.active) return;
+  
+  ctx.save();
+  ctx.globalAlpha = comet.life;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(comet.x, comet.y);
+  ctx.lineTo(comet.x - comet.vx * 0.1, comet.y - comet.vy * 0.1);
+  ctx.stroke();
+  
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(comet.x, comet.y, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 };

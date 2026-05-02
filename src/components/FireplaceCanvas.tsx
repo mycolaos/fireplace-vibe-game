@@ -17,7 +17,8 @@ import {
   WEATHER_MIN_DURATION,
   WEATHER_MAX_DURATION,
   WEATHER_CONFIG,
-  DAY_CYCLE_DURATION
+  DAY_CYCLE_DURATION,
+  DECORATION_CONFIG
 } from '../constants';
 import { GameEvent, UIState, Star, Firefly, Tree, WeatherType } from '../types';
 import { fireAudio } from '../services/audioService';
@@ -78,12 +79,67 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
             offset: Math.random() * 100
           });
         }
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < DECORATION_CONFIG.TREES.count; i++) {
           state.current.trees.push({
             x: 0.1 + Math.random() * 0.8,
             y: 0.75 + Math.random() * 0.1,
-            height: 40 + Math.random() * 60,
+            height: DECORATION_CONFIG.TREES.minHeight + Math.random() * (DECORATION_CONFIG.TREES.maxHeight - DECORATION_CONFIG.TREES.minHeight),
             phase: Math.random() * Math.PI * 2
+          });
+        }
+        for (let i = 0; i < DECORATION_CONFIG.MOUNTAINS.count; i++) {
+          state.current.mountains.push({
+            x: 0.1 + Math.random() * 0.8,
+            y: 0,
+            width: DECORATION_CONFIG.MOUNTAINS.minWidth + Math.random() * (DECORATION_CONFIG.MOUNTAINS.maxWidth - DECORATION_CONFIG.MOUNTAINS.minWidth),
+            height: DECORATION_CONFIG.MOUNTAINS.minHeight + Math.random() * (DECORATION_CONFIG.MOUNTAINS.maxHeight - DECORATION_CONFIG.MOUNTAINS.minHeight),
+            color: Math.random() > 0.5 ? '#05020a' : '#08040d'
+          });
+        }
+        for (let i = 0; i < DECORATION_CONFIG.CLOUDS.count; i++) {
+          const puffs = [];
+          const puffCount = 3 + Math.floor(Math.random() * 4);
+          for (let j = 0; j < puffCount; j++) {
+            puffs.push({
+              dx: j * 20 - (puffCount * 10),
+              dy: (Math.random() - 0.5) * 20,
+              radius: 15 + Math.random() * 20
+            });
+          }
+
+          state.current.clouds.push({
+            x: Math.random(),
+            y: 50 + Math.random() * 150,
+            scale: DECORATION_CONFIG.CLOUDS.minScale + Math.random() * (DECORATION_CONFIG.CLOUDS.maxScale - DECORATION_CONFIG.CLOUDS.minScale),
+            speed: DECORATION_CONFIG.CLOUDS.minSpeed + Math.random() * (DECORATION_CONFIG.CLOUDS.maxSpeed - DECORATION_CONFIG.CLOUDS.minSpeed),
+            opacity: DECORATION_CONFIG.CLOUDS.minOpacity + Math.random() * (DECORATION_CONFIG.CLOUDS.maxOpacity - DECORATION_CONFIG.CLOUDS.minOpacity),
+            threshold: Math.random(),
+            puffs
+          });
+        }
+        for (let i = 0; i < DECORATION_CONFIG.ROCKS.count; i++) {
+          state.current.rocks.push({
+            x: 0.2 + Math.random() * 0.6,
+            y: (Math.random() - 0.5) * 60,
+            size: DECORATION_CONFIG.ROCKS.minSize + Math.random() * (DECORATION_CONFIG.ROCKS.maxSize - DECORATION_CONFIG.ROCKS.minSize),
+            rotation: Math.random() * Math.PI * 2,
+            color: Math.random() > 0.5 ? '#0a0a1a' : '#1a1a2a'
+          });
+        }
+        for (let i = 0; i < DECORATION_CONFIG.GRASS.count; i++) {
+          state.current.grass.push({
+            x: Math.random(),
+            y: (Math.random() - 0.5) * 100,
+            height: DECORATION_CONFIG.GRASS.minHeight + Math.random() * (DECORATION_CONFIG.GRASS.maxHeight - DECORATION_CONFIG.GRASS.minHeight),
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+        for (let i = 0; i < DECORATION_CONFIG.CACTI.count; i++) {
+          state.current.cacti.push({
+            x: 0.1 + Math.random() * 0.8,
+            y: 0.7 + Math.random() * 0.1,
+            height: DECORATION_CONFIG.CACTI.minHeight + Math.random() * (DECORATION_CONFIG.CACTI.maxHeight - DECORATION_CONFIG.CACTI.minHeight),
+            rotation: (Math.random() - 0.5) * 0.2
           });
         }
 
@@ -145,6 +201,12 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
           const randomDuration = (WEATHER_MIN_DURATION + Math.random() * (WEATHER_MAX_DURATION - WEATHER_MIN_DURATION)) * config.durationMult;
           state.current.nextWeatherTime = time + randomDuration;
         }
+
+        // Smoothly transition cloud density and alpha based on weather
+        const targetCloudDensity = (WEATHER_CONFIG[state.current.weather] as any).clouds;
+        const targetCloudAlpha = (WEATHER_CONFIG[state.current.weather] as any).cloudLikelihood;
+        state.current.cloudDensity += (targetCloudDensity - state.current.cloudDensity) * 0.5 * dt;
+        state.current.cloudAlpha += (targetCloudAlpha - state.current.cloudAlpha) * 0.5 * dt;
 
         // --- 3. RESOURCE REGENERATION ---
         if (state.current.sticks < MAX_STICKS) {
@@ -224,6 +286,26 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         // Smoke slowly fades
         state.current.smoke = Math.max(0, state.current.smoke - SMOKE_DECAY * dt);
 
+        // --- COMET LOGIC ---
+        if (!state.current.comet.active && Math.random() < DECORATION_CONFIG.COMET.chance) {
+          state.current.comet = {
+            active: true,
+            x: Math.random() * canvas.width,
+            y: Math.random() * (canvas.height * 0.3),
+            vx: DECORATION_CONFIG.COMET.minVx + Math.random() * (DECORATION_CONFIG.COMET.maxVx - DECORATION_CONFIG.COMET.minVx),
+            vy: DECORATION_CONFIG.COMET.minVy + Math.random() * (DECORATION_CONFIG.COMET.maxVy - DECORATION_CONFIG.COMET.minVy),
+            life: 1.0
+          };
+        }
+        if (state.current.comet.active) {
+          state.current.comet.x += state.current.comet.vx * dt;
+          state.current.comet.y += state.current.comet.vy * dt;
+          state.current.comet.life -= DECORATION_CONFIG.COMET.decayTime * dt;
+          if (state.current.comet.life <= 0 || state.current.comet.x > canvas.width || state.current.comet.y > canvas.height) {
+            state.current.comet.active = false;
+          }
+        }
+
         // Throttle UI state updates for performance
         if (Math.random() > 0.8) updateUI();
         
@@ -242,14 +324,20 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
 
       // Layered Drawing
       renderer.drawSky(ctx, canvas.width, horizonY, state.current.cycleProgress);
+      renderer.drawClouds(ctx, state.current.clouds, canvas.width, time, state.current.cloudDensity, state.current.cloudAlpha);
       renderer.drawGround(ctx, canvas.width, canvas.height, horizonY, state.current.cycleProgress);
       renderer.drawMoon(ctx, canvas.width, canvas.height, state.current.cycleProgress);
       if (state.current.weather === 'CLEAR' || state.current.weather === 'WINDY') {
         renderer.drawStars(ctx, state.current.stars, canvas.width, horizonY, time, state.current.cycleProgress);
       }
+      renderer.drawComet(ctx, state.current.comet);
+      renderer.drawMountains(ctx, state.current.mountains, canvas.width, horizonY);
       renderer.drawDunes(ctx, canvas.width, horizonY);
+      renderer.drawRocks(ctx, state.current.rocks, canvas.width, horizonY);
       renderer.drawCabin(ctx, canvas.width, horizonY, time);
       renderer.drawTrees(ctx, state.current.trees, canvas.width, horizonY, time);
+      renderer.drawCacti(ctx, state.current.cacti, canvas.width, horizonY);
+      renderer.drawGrass(ctx, state.current.grass, canvas.width, horizonY, time);
       
       renderer.drawWeatherOverlay(ctx, state.current.weather, canvas.width, canvas.height);
 
