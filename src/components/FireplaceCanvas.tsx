@@ -423,13 +423,14 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
 
       // Layered Drawing
       renderer.drawSky(ctx, canvas.width, horizonY, state.current.cycleProgress);
-      renderer.drawClouds(ctx, state.current.clouds, canvas.width, time, state.current.cloudDensity, state.current.cloudAlpha);
-      renderer.drawGround(ctx, canvas.width, canvas.height, horizonY, state.current.cycleProgress);
-      renderer.drawMoon(ctx, canvas.width, canvas.height, state.current.cycleProgress);
       
       // Smoothly fade stars based on weather transition weight
       const starsAlphaMod = wWeights.CLEAR + wWeights.WINDY * 0.7;
       renderer.drawStars(ctx, state.current.stars, canvas.width, horizonY, time, state.current.cycleProgress, starsAlphaMod);
+      
+      renderer.drawMoon(ctx, canvas.width, canvas.height, state.current.cycleProgress);
+      renderer.drawClouds(ctx, state.current.clouds, canvas.width, time, state.current.cloudDensity, state.current.cloudAlpha);
+      renderer.drawGround(ctx, canvas.width, canvas.height, horizonY, state.current.cycleProgress);
       
       renderer.drawComet(ctx, state.current.comet);
       renderer.drawMountains(ctx, state.current.mountains, canvas.width, horizonY);

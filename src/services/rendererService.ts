@@ -64,6 +64,8 @@ export const drawGround = (ctx: CanvasRenderingContext2D, width: number, height:
   ctx.fillRect(0, horizonY, width, height - horizonY);
 };
 
+let moonCanvas: HTMLCanvasElement | null = null;
+
 export const drawMoon = (ctx: CanvasRenderingContext2D, width: number, height: number, cycle: number) => {
   // Moon is visible mostly at night (0.2 to 0.8)
   let alpha = 0;
@@ -76,19 +78,46 @@ export const drawMoon = (ctx: CanvasRenderingContext2D, width: number, height: n
   const moonX = width * (startX + (cycle * (endX - startX))); // Moon moves across the sky
   const moonY = height * (baseY - Math.sin(cycle * Math.PI) * arcHeight);
   
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.shadowBlur = 40;
-  ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
-  ctx.fillStyle = '#fefce8';
-  ctx.beginPath();
-  ctx.arc(moonX, moonY, 30, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.beginPath();
-  ctx.arc(moonX + 10, moonY - 5, 28, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (typeof document !== 'undefined') {
+    if (!moonCanvas) {
+      moonCanvas = document.createElement('canvas');
+      moonCanvas.width = 100;
+      moonCanvas.height = 100;
+    }
+    const oCtx = moonCanvas.getContext('2d');
+    if (oCtx) {
+      oCtx.save();
+      oCtx.clearRect(0, 0, 100, 100);
+      
+      // Draw fully opaque solid moon circle
+      oCtx.fillStyle = '#fefce8';
+      oCtx.beginPath();
+      oCtx.arc(50, 50, 30, 0, Math.PI * 2);
+      oCtx.fill();
+      
+      // Draw a solid border outline for sharp shape definition
+      oCtx.strokeStyle = '#fefce8';
+      oCtx.lineWidth = 1.5;
+      oCtx.stroke();
+      
+      // Use destination-out to bite a piece of the circle and create an opaque crescent.
+      // Since it's destination-out, it erases the fill in the bite area,
+      // creating a perfect sharp opaque crescent.
+      oCtx.globalCompositeOperation = 'destination-out';
+      oCtx.beginPath();
+      oCtx.arc(60, 45, 28, 0, Math.PI * 2);
+      oCtx.fill();
+      
+      oCtx.restore();
+    }
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowBlur = 40;
+    ctx.shadowColor = 'rgba(254, 252, 232, 0.4)';
+    ctx.drawImage(moonCanvas, moonX - 50, moonY - 50);
+    ctx.restore();
+  }
 };
 
 export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: number, horizonY: number, time: number, cycle: number, starsAlphaMod: number = 1.0) => {
@@ -99,6 +128,17 @@ export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: n
   }
   if (alphaMult <= 0) return;
   if (starsAlphaMod <= 0.01) return;
+
+  // Calculate moon position if visible
+  let moonAlpha = 0;
+  if (cycle > 0.2 && cycle < 0.8) {
+    moonAlpha = Math.sin((cycle - 0.2) / 0.6 * Math.PI);
+  }
+
+  const { startX, endX, baseY, arcHeight } = MOON_POSITION_CONFIG;
+  const height = ctx.canvas.height;
+  const moonX = width * (startX + (cycle * (endX - startX)));
+  const moonY = height * (baseY - Math.sin(cycle * Math.PI) * arcHeight);
 
   ctx.fillStyle = 'white';
   stars.forEach(s => {
@@ -113,10 +153,25 @@ export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: n
     }
     
     if (starAlpha > 0) {
+      const starX = s.x * width;
+      const starY = s.y * horizonY * 0.9;
+
+      // Skip drawing stars that are behind the physical round moon sphere
+      if (moonAlpha > 0) {
+        const dx = starX - moonX;
+        const dy = starY - moonY;
+        const distSq = dx * dx + dy * dy;
+        // The physical moon radius is 30. We include star size as buffer to prevent clipping edges
+        const bufferRadius = 30 + s.size;
+        if (distSq < bufferRadius * bufferRadius) {
+          return;
+        }
+      }
+
       const twinkle = Math.sin(time * 0.002 + s.phase) * 0.5 + 0.5;
       ctx.globalAlpha = (0.3 + twinkle * 0.7) * starAlpha * starsAlphaMod;
       ctx.beginPath();
-      ctx.arc(s.x * width, s.y * horizonY * 0.9, s.size, 0, Math.PI * 2);
+      ctx.arc(starX, starY, s.size, 0, Math.PI * 2);
       ctx.fill();
     }
   });
