@@ -21,7 +21,7 @@ export const spawnParticle = (type: 'fire' | 'smoke' | 'rain' | 'snow', x: numbe
   } else if (type === 'smoke') {
     angle = (Math.PI * 1.5) + (Math.random() - 0.5) * 0.4 + (wind * 0.25);
     speed = 0.5 + Math.random() * 0.8;
-    const gray = 45 + Math.floor(Math.random() * 30);
+    const gray = 180 + Math.floor(Math.random() * 30);
     // Store as clean rgb to allow dynamic opacity interpolation in updater
     color = `rgb(${gray}, ${gray}, ${gray + 2})`;
     size = 12 + Math.random() * 10;
@@ -79,7 +79,7 @@ export const updateParticles = (particles: Particle[], ctx: CanvasRenderingConte
         const currentSize = p.size * (1.0 + progress * 3.8);
         
         // Double-ended fade curve so clouds don't suddenly pop into existence
-        const maxAlpha = 0.24;
+        const maxAlpha = 0.08;
         const opacity = Math.sin(p.life * Math.PI) * maxAlpha;
         
         // Draw real volumetric smoke cloud puff using radial gradient lighting
