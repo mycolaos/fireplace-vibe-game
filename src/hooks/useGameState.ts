@@ -19,7 +19,7 @@ import {
   WEATHER_CONFIG,
   DEFAULT_CYCLE_START
 } from '../constants';
-import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree, WeatherType, Mountain, Cloud, Rock, Grass, Cactus, Comet } from '../types';
+import { Particle, Wood, GameEvent, UIState, Star, Firefly, Tree, WeatherType, Mountain, Cloud, Rock, Grass, Cactus, Comet, Wolf } from '../types';
 
 export function useGameState() {
   const initialWeather: WeatherType = 'CLEAR';
@@ -41,6 +41,7 @@ export function useGameState() {
     grass: [] as Grass[],
     cacti: [] as Cactus[],
     comet: { x: 0, y: 0, vx: 0, vy: 0, life: 0, active: false } as Comet,
+    wolf: { x: -100, y: 0, targetX: 0, targetY: 0, state: 'HIDDEN' as const, timer: 0, direction: 1 as const, eyeBrightness: 0 } as Wolf,
     gameOver: false,
     startTime: 0,
     nextWindChange: 0,
@@ -111,6 +112,7 @@ export function useGameState() {
       grass: [],
       cacti: [],
       comet: { x: 0, y: 0, vx: 0, vy: 0, life: 0, active: false },
+      wolf: { x: -100, y: 0, targetX: 0, targetY: 0, state: 'HIDDEN' as const, timer: 0, direction: 1 as const, eyeBrightness: 0 } as Wolf,
       gameOver: false,
       startTime: now,
       nextWindChange: now + 5000,

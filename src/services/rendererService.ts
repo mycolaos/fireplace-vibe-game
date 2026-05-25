@@ -281,6 +281,180 @@ export const drawGrass = (ctx: CanvasRenderingContext2D, grass: Grass[], width: 
   });
 };
 
+export const drawWolf = (ctx: CanvasRenderingContext2D, wolf: any, width: number, horizonY: number, time: number) => {
+  if (wolf.state === 'HIDDEN') return;
+
+  const { x, y, state, direction, timer, eyeBrightness } = wolf;
+  
+  ctx.save();
+  ctx.translate(x, horizonY + y);
+  
+  // Use horizontal scale for walking/exiting
+  if (state !== 'SITTING' && state !== 'HOWLING') {
+     ctx.scale(direction, 1);
+  }
+
+  ctx.fillStyle = '#05020a'; 
+  
+  // Body - Angled/Geometric style
+  ctx.beginPath();
+  if (state === 'SITTING' || state === 'HOWLING') {
+     // Symmetrical sitting silhouette (facing player)
+     ctx.moveTo(-14, 0);
+     ctx.lineTo(14, 0);
+     ctx.lineTo(11, -12);
+     ctx.lineTo(15, -14); // hip out
+     ctx.lineTo(8, -26);  // shoulder in
+     ctx.lineTo(-8, -26); // shoulder in
+     ctx.lineTo(-15, -14); // hip out
+     ctx.lineTo(-11, -12);
+     ctx.closePath();
+     ctx.fill();
+
+     // Tail (geometric, off to one side)
+     ctx.beginPath();
+     ctx.moveTo(-10, 0);
+     ctx.lineTo(-18, 4);
+     ctx.lineTo(-12, 10);
+     ctx.closePath();
+     ctx.fill();
+  } else {
+     // Standing/Walking silhouette (angular)
+     ctx.moveTo(-18, -14);
+     ctx.lineTo(12, -18);  // Back
+     ctx.lineTo(18, -8);   // Chest
+     ctx.lineTo(15, -4);   // Belly front
+     ctx.lineTo(-12, -4);  // Belly back
+     ctx.lineTo(-20, -8);  // Hip
+     ctx.closePath();
+     ctx.fill();
+
+     // Legs (walking - angular)
+     const walkPhase = time * 0.01;
+     const legPositions = [
+       { x: -14, bounce: Math.sin(walkPhase) * 6 },
+       { x: -6, bounce: Math.cos(walkPhase) * 6 },
+       { x: 4, bounce: Math.sin(walkPhase + Math.PI) * 6 },
+       { x: 12, bounce: Math.cos(walkPhase + Math.PI) * 6 }
+     ];
+
+     legPositions.forEach(leg => {
+       ctx.beginPath();
+       ctx.moveTo(leg.x, -6);
+       ctx.lineTo(leg.x + 2, -6);
+       ctx.lineTo(leg.x + 1, 4 + leg.bounce);
+       ctx.lineTo(leg.x - 1, 4 + leg.bounce);
+       ctx.closePath();
+       ctx.fill();
+     });
+  }
+
+  // Head (modularly angled)
+  ctx.save();
+  const howlOffset = state === 'HOWLING' ? Math.min(1, timer / 1000) : 0;
+  
+  if (state === 'SITTING' || state === 'HOWLING') {
+     ctx.translate(0, -28); // Center the head
+     if (state === 'HOWLING') {
+        const lift = howlOffset * 6;
+        ctx.translate(0, -lift);
+     }
+     
+     // Angular head shape (facing forward)
+     ctx.beginPath();
+     ctx.moveTo(-8, -4);
+     ctx.lineTo(0, -10);
+     ctx.lineTo(8, -4);
+     ctx.lineTo(0, 10); // Nose area
+     ctx.closePath();
+     ctx.fill();
+
+     // Snout detail (facing forward)
+     ctx.fillRect(-2, 4, 4, 3);
+
+     // Angular Ears (two)
+     ctx.beginPath();
+     ctx.moveTo(-5, -6);
+     ctx.lineTo(-9, -17);
+     ctx.lineTo(-1, -8);
+     ctx.fill();
+
+     ctx.beginPath();
+     ctx.moveTo(5, -6);
+     ctx.lineTo(9, -17);
+     ctx.lineTo(1, -8);
+     ctx.fill();
+
+     // Two Eyes
+     if (eyeBrightness > 0) {
+        ctx.shadowBlur = 6 * eyeBrightness;
+        ctx.shadowColor = '#00ffff';
+        ctx.fillStyle = `rgba(100, 255, 255, ${eyeBrightness})`;
+        
+        // Left Eye
+        ctx.beginPath();
+        ctx.moveTo(-5, -2);
+        ctx.lineTo(-2, -3);
+        ctx.lineTo(-3.5, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right Eye
+        ctx.beginPath();
+        ctx.moveTo(5, -2);
+        ctx.lineTo(2, -3);
+        ctx.lineTo(3.5, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+     }
+
+  } else {
+     ctx.translate(16, -20);
+     ctx.rotate(Math.sin(time * 0.005) * 0.05); // Subtle head bob
+     
+     // Profile head shape
+     ctx.beginPath();
+     ctx.moveTo(0, -6);
+     ctx.lineTo(10, -2); // Snout top
+     ctx.lineTo(9, 2);   // Snout bottom
+     ctx.lineTo(0, 4);   // Chin
+     ctx.lineTo(-4, 0);  // Back head
+     ctx.closePath();
+     ctx.fill();
+
+     ctx.fillRect(8, -1, 3, 2);
+
+     ctx.beginPath();
+     ctx.moveTo(-1, -4);
+     ctx.lineTo(-5, -12);
+     ctx.lineTo(1, -6);
+     ctx.fill();
+
+     ctx.beginPath();
+     ctx.moveTo(2, -3);
+     ctx.lineTo(3, -13);
+     ctx.lineTo(5, -5);
+     ctx.fill();
+
+     if (eyeBrightness > 0) {
+        ctx.shadowBlur = 6 * eyeBrightness;
+        ctx.shadowColor = '#00ffff';
+        ctx.fillStyle = `rgba(100, 255, 255, ${eyeBrightness})`;
+        ctx.beginPath();
+        ctx.moveTo(3, -1);
+        ctx.lineTo(5, -2);
+        ctx.lineTo(4, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+     }
+  }
+  
+  ctx.restore();
+  ctx.restore();
+};
+
 export const drawFireflies = (ctx: CanvasRenderingContext2D, fireflies: Firefly[], width: number, height: number, time: number) => {
   ctx.save();
   ctx.shadowBlur = 8;

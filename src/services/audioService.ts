@@ -78,6 +78,69 @@ export class FireAudio {
     setTimeout(() => this.scheduleCrackle(), 30 + Math.random() * 400);
   }
 
+  playHowl(isMuted: boolean) {
+    if (!this.ctx || isMuted) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    const now = this.ctx.currentTime;
+    
+    // Primary howl oscillator
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const lfo = this.ctx.createOscillator();
+    const lfoGain = this.ctx.createGain();
+    const masterGain = this.ctx.createGain();
+    
+    // Sound qualities
+    osc1.type = 'triangle';
+    osc2.type = 'sine';
+    osc2.detune.value = 7; // Slight detune for richness
+    
+    // LFO for pitch vibrato (essential for natural howls)
+    lfo.type = 'sine';
+    lfo.frequency.value = 5; // 5Hz vibrato
+    lfoGain.gain.value = 10; // Vibrato depth
+    
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc1.frequency);
+    lfoGain.connect(osc2.frequency);
+    
+    // Frequency envelope (The classic rise and fall)
+    const baseFreq = 380 + Math.random() * 40;
+    osc1.frequency.setValueAtTime(baseFreq, now);
+    osc1.frequency.exponentialRampToValueAtTime(baseFreq * 1.8, now + 1.2);
+    osc1.frequency.exponentialRampToValueAtTime(baseFreq * 0.9, now + 3.5);
+    
+    osc2.frequency.setValueAtTime(baseFreq, now);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 1.8, now + 1.2);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 0.9, now + 3.5);
+
+    // Amplitude envelope
+    masterGain.gain.setValueAtTime(0, now);
+    masterGain.gain.linearRampToValueAtTime(0.04, now + 0.5);
+    masterGain.gain.linearRampToValueAtTime(0.03, now + 2.5);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + 4.0);
+    
+    // Filtering for "hollow" distance effect
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1100;
+    filter.Q.value = 1;
+    
+    osc1.connect(masterGain);
+    osc2.connect(masterGain);
+    masterGain.connect(filter);
+    filter.connect(this.ctx.destination);
+    
+    lfo.start(now);
+    osc1.start(now);
+    osc2.start(now);
+    
+    lfo.stop(now + 4.1);
+    osc1.stop(now + 4.1);
+    osc2.stop(now + 4.1);
+  }
+
   update(intensity: number, muted: boolean) {
     if (!this.ctx || !this.gainNode) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();

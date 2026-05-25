@@ -306,6 +306,78 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
           }
         }
 
+        // --- WOLF LOGIC ---
+        const wolf = state.current.wolf;
+        if (wolf.state === 'HIDDEN') {
+           if (Math.random() < 0.001) { 
+              const side = Math.random() > 0.5 ? 1 : -1;
+              wolf.x = side > 0 ? -150 : canvas.width + 150;
+              const randomTree = state.current.trees[Math.floor(Math.random() * state.current.trees.length)];
+              wolf.targetX = randomTree ? randomTree.x * canvas.width + (Math.random() - 0.5) * 60 : canvas.width / 2;
+              wolf.y = (randomTree ? (randomTree.y - 0.75) * 100 : 0) + 10;
+              wolf.direction = (wolf.targetX > wolf.x ? 1 : -1) as 1 | -1;
+              wolf.state = 'WALKING';
+              wolf.eyeBrightness = 0;
+              wolf.eyeBrightnessBase = 0;
+           }
+        } else if (wolf.state === 'WALKING' || wolf.state === 'EXITING') {
+           const dx = wolf.targetX - wolf.x;
+           const speed = 70 * dt;
+           if (Math.abs(dx) < speed) {
+              wolf.x = wolf.targetX;
+              if (wolf.state === 'WALKING') {
+                 wolf.state = 'SITTING';
+                 wolf.timer = 2500 + Math.random() * 3000;
+                 wolf.eyeBrightnessBase = 0;
+              } else {
+                 wolf.state = 'HIDDEN';
+              }
+           } else {
+              wolf.x += Math.sign(dx) * speed;
+           }
+        } else if (wolf.state === 'SITTING') {
+           if (wolf.timer > 0) {
+              wolf.timer -= dt * 1000;
+              
+              // Base brightness climbs gradually towards full glow
+              const baseBrightness = Math.min(1, (wolf.eyeBrightnessBase ?? 0) + dt * 0.5);
+              wolf.eyeBrightnessBase = baseBrightness;
+              
+              // Dynamic eye flicker/pulse modifiers
+              let pulse = 0;
+              if (wolf.timer < 1500) {
+                 // Flicker intensifies as we approach the HOWLING state
+                 const imminentFactor = 1.0 - (wolf.timer / 1500); // Scales from 0 to 1
+                 
+                 // High speed jitter + erratic heartbeat pulse + noise simulating eye narrow/twinkle
+                 const heartbeat = Math.sin(time * 0.015) * 0.12;
+                 const rapidShimmer = Math.sin(time * 0.065) * 0.18 * (0.3 + 0.7 * Math.sin(time * 0.12));
+                 const naturalIrregularity = (Math.random() - 0.5) * 0.25;
+                 
+                 pulse = (heartbeat + rapidShimmer + naturalIrregularity) * imminentFactor;
+              } else {
+                 // Standard slow mystical ambient pulse
+                 pulse = Math.sin(time * 0.003) * 0.06;
+              }
+              
+              wolf.eyeBrightness = Math.max(0.1, Math.min(1.4, baseBrightness + pulse));
+           } else {
+              wolf.state = 'HOWLING';
+              wolf.timer = 3600;
+              fireAudio.playHowl(isMuted);
+           }
+        } else if (wolf.state === 'HOWLING') {
+           if (wolf.timer > 0) {
+              wolf.timer -= dt * 1000;
+              wolf.eyeBrightness = Math.max(0.7, 0.7 + Math.random() * 0.3);
+           } else {
+              wolf.state = 'EXITING';
+              wolf.targetX = wolf.direction > 0 ? canvas.width + 200 : -200;
+              wolf.direction = (wolf.targetX > wolf.x ? 1 : -1) as 1 | -1;
+              wolf.eyeBrightness = 0.5;
+           }
+        }
+
         // Throttle UI state updates for performance
         if (Math.random() > 0.8) updateUI();
         
@@ -337,6 +409,7 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
       renderer.drawCabin(ctx, canvas.width, horizonY, time);
       renderer.drawTrees(ctx, state.current.trees, canvas.width, horizonY, time);
       renderer.drawCacti(ctx, state.current.cacti, canvas.width, horizonY);
+      renderer.drawWolf(ctx, state.current.wolf, canvas.width, horizonY, time);
       renderer.drawGrass(ctx, state.current.grass, canvas.width, horizonY, time);
       
       renderer.drawWeatherOverlay(ctx, state.current.weather, canvas.width, canvas.height);

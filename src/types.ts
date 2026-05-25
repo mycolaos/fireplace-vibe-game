@@ -7,6 +7,20 @@ export type GameEvent = 'NONE' | 'WIND_GUST' | 'DAMP_WOOD' | 'PERFECT_AIR';
 
 export type WeatherType = 'CLEAR' | 'WINDY' | 'RAINY' | 'SNOWY';
 
+export type WolfState = 'WALKING' | 'SITTING' | 'HOWLING' | 'EXITING' | 'HIDDEN';
+
+export interface Wolf {
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+  state: WolfState;
+  timer: number;
+  direction: 1 | -1;
+  eyeBrightness: number;
+  eyeBrightnessBase?: number;
+}
+
 export interface Particle {
   x: number;
   y: number;
