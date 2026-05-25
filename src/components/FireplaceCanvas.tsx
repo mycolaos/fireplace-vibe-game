@@ -429,8 +429,29 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
           for (let i = 0; i < pCount; i++) {
             state.current.particles.push(spawnParticle('fire', centerX + (Math.random() - 0.5) * 30, centerY, state.current.wind, state.current.intensity));
           }
-          if (state.current.smoke > 10 && Math.random() < state.current.smoke / 200) {
-            state.current.particles.push(spawnParticle('smoke', centerX + (Math.random() - 0.5) * 40, centerY - 20, state.current.wind, state.current.intensity));
+          
+          // 1. Cozy baseline ambient smoke wisps for immersive, real feel
+          if (state.current.intensity > 15 && Math.random() < 0.04) {
+            state.current.particles.push(spawnParticle('smoke', centerX + (Math.random() - 0.5) * 32, centerY - 15, state.current.wind, state.current.intensity));
+          }
+
+          // 2. High-density distinguishable smoke clouds coming from fireplace
+          if (state.current.smoke > 5) {
+            const smokeProb = Math.min(0.95, state.current.smoke / 100);
+            if (Math.random() < smokeProb) {
+              const spawnCount = Math.min(6, Math.floor(state.current.smoke / 16) + 1);
+              for (let i = 0; i < spawnCount; i++) {
+                state.current.particles.push(
+                  spawnParticle(
+                    'smoke', 
+                    centerX + (Math.random() - 0.5) * 45, 
+                    centerY - 10 - Math.random() * 20, 
+                    state.current.wind, 
+                    state.current.intensity
+                  )
+                );
+              }
+            }
           }
         }
 
@@ -450,11 +471,6 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
       state.current.particles = updateParticles(state.current.particles, ctx);
 
       // --- POST-PROCESSING: Atmospheric Effects ---
-      // Smoke Overlay
-      if (state.current.smoke > 50) {
-        ctx.fillStyle = `rgba(50, 50, 50, ${Math.min(0.6, (state.current.smoke - 50) / 100)})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
 
       // Critical Low Fire Vignette
       if (state.current.intensity < 25) {
