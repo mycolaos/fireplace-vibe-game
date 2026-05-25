@@ -467,8 +467,14 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         }
       }
       
-      // Physics Update and Render for all particles
-      state.current.particles = updateParticles(state.current.particles, ctx);
+      // Physics Update and Render for all particles, factoring in wind direction and strength
+      let effectiveWind = state.current.wind;
+      if (state.current.currentEvent === 'WIND_GUST') {
+        effectiveWind = state.current.wind === 0 ? (Math.random() > 0.5 ? 1.6 : -1.6) : state.current.wind * 1.8;
+      } else if (state.current.weather === 'WINDY') {
+        effectiveWind = state.current.wind === 0 ? (Math.random() > 0.5 ? 1.1 : -1.1) : state.current.wind * 1.3;
+      }
+      state.current.particles = updateParticles(state.current.particles, ctx, effectiveWind);
 
       // --- POST-PROCESSING: Atmospheric Effects ---
 

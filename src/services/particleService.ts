@@ -19,12 +19,12 @@ export const spawnParticle = (type: 'fire' | 'smoke' | 'rain' | 'snow', x: numbe
     else color = `rgba(${150 + Math.random() * 105}, 20, 20, 0.8)`;
     size = 2 + Math.random() * 6;
   } else if (type === 'smoke') {
-    angle = (Math.PI * 1.5) + (Math.random() - 0.5) * 0.4 + (wind * 0.25);
-    speed = 0.5 + Math.random() * 0.8;
-    const gray = 180 + Math.floor(Math.random() * 30);
+    angle = (Math.PI * 1.5) + (Math.random() - 0.5) * 0.8 + (wind * 0.35);
+    speed = 0.8 + Math.random() * 1.0;
+    const gray = 195 + Math.floor(Math.random() * 30);
     // Store as clean rgb to allow dynamic opacity interpolation in updater
     color = `rgb(${gray}, ${gray}, ${gray + 2})`;
-    size = 12 + Math.random() * 10;
+    size = 14 + Math.random() * 12;
   } else if (type === 'rain') {
     angle = (Math.PI * 0.5) + (wind * 0.2); // Falling down
     speed = 8 + Math.random() * 4;
@@ -49,18 +49,38 @@ export const spawnParticle = (type: 'fire' | 'smoke' | 'rain' | 'snow', x: numbe
   };
 };
 
-export const updateParticles = (particles: Particle[], ctx: CanvasRenderingContext2D): Particle[] => {
+export const updateParticles = (particles: Particle[], ctx: CanvasRenderingContext2D, wind: number = 0): Particle[] => {
   const remaining = particles.filter(p => {
     // 1. Particle Physics / State Update
     if (p.type === 'smoke') {
       p.y += p.vy;
-      // Add visual horizontal swaying
-      const sway = Math.sin((1 - p.life) * 8 + p.size) * 0.35;
-      p.x += p.vx + sway;
-      // Slow down slightly as they rise and expand
-      p.vy *= 0.992;
-      // Graceful slower decay for smoke (150-250 frames)
-      p.life -= 0.0035 + Math.random() * 0.0035;
+      
+      // Wind applies horizontal draft acceleration (ambient draft grows as the particle rises)
+      const windDraft = wind * 0.12 * (1.0 + (1.0 - p.life) * 3.5);
+      p.vx += windDraft;
+      
+      // Maintain natural inertia with a light drag factor to prevent runaway speeds
+      p.vx *= 0.982;
+      
+      // Calculate a highly distinct, deterministic drift seed for this specific puff (-1 to 1)
+      const driftSeed = Math.sin(p.size * 5432.10);
+
+      // Create a persistent outward spreading drift that grows as the particle gets older (convective plume dispersion)
+      // This guarantees they drift away diagonally and spread out instead of stacking vertically
+      const plumeExpansion = driftSeed * 1.6 * (1.0 - p.life);
+
+      // Apply coordinates (both momentum velocity and local convective expansion)
+      p.x += p.vx + plumeExpansion;
+
+      // Add visual lightweight horizontal wafting sway
+      const sway = Math.sin((1 - p.life) * 8.0 + p.size) * 0.35;
+      p.x += sway;
+      
+      // Gradual slowdown of vertical ascent as smoke cools and travels
+      p.vy *= 0.993;
+      
+      // Natural decay rate
+      p.life -= 0.0028 + Math.random() * 0.0024;
     } else {
       p.x += p.vx;
       p.y += p.vy;
