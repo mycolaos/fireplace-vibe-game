@@ -243,16 +243,21 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         const factor = state.current.currentEvent === 'WIND_GUST' ? 1.0 : 0.4;
         state.current.oxygen += 10 * factor * dt; // Wind feeds the fire but can scatter embers
         state.current.intensity -= 0.3 * factor * dt;
-        if (Math.random() > 0.98) state.current.wind = (Math.random() > 0.5 ? 1 : -1);
+        if (Math.random() > 0.98) state.current.targetWind = (Math.random() > 0.5 ? 1 : -1);
       } else if (state.current.currentEvent === 'PERFECT_AIR') {
         state.current.oxygen = Math.min(100, state.current.oxygen + 10 * dt);
       }
 
         // Normal wind fluctuation
         if (state.current.currentEvent === 'NONE' && time > state.current.nextWindChange) {
-          state.current.wind = (Math.floor(Math.random() * 3) - 1) as -1 | 0 | 1;
+          state.current.targetWind = (Math.floor(Math.random() * 3) - 1);
           state.current.nextWindChange = time + 5000 + Math.random() * 5000;
         }
+
+        // Smoothly interpolate current wind towards targetWind
+        const windLerpSpeed = 0.65; // High continuous stability
+        const currentTargetWind = state.current.targetWind ?? 0;
+        state.current.wind += (currentTargetWind - state.current.wind) * windLerpSpeed * dt;
 
         // --- 4. FIRE SYSTEMS (OXYGEN & INTENSITY) ---
         // Oxygen is consumed by the fire's intensity
@@ -274,7 +279,7 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         let effectiveDecay = state.current.decayRate;
         if (state.current.intensity < 20) effectiveDecay *= 2.0; // Faster decay when fire is small
         state.current.intensity -= effectiveDecay * dt;
-        if (state.current.wind !== 0) state.current.intensity -= 0.2 * dt;
+        if (Math.abs(state.current.wind) > 0.15) state.current.intensity -= 0.2 * dt;
         
         // GAME OVER CHECK
         if (state.current.intensity <= 0 || state.current.oxygen <= 0) {
@@ -470,9 +475,15 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
       // Physics Update and Render for all particles, factoring in wind direction and strength
       let effectiveWind = state.current.wind;
       if (state.current.currentEvent === 'WIND_GUST') {
-        effectiveWind = state.current.wind === 0 ? (Math.random() > 0.5 ? 1.6 : -1.6) : state.current.wind * 1.8;
+        effectiveWind = state.current.wind * 1.8;
+        if (Math.abs(effectiveWind) < 0.2) {
+          effectiveWind = 1.6 * (state.current.targetWind || 1);
+        }
       } else if (state.current.weather === 'WINDY') {
-        effectiveWind = state.current.wind === 0 ? (Math.random() > 0.5 ? 1.1 : -1.1) : state.current.wind * 1.3;
+        effectiveWind = state.current.wind * 1.3;
+        if (Math.abs(effectiveWind) < 0.2) {
+          effectiveWind = 1.1 * (state.current.targetWind || 1);
+        }
       }
       state.current.particles = updateParticles(state.current.particles, ctx, effectiveWind);
 

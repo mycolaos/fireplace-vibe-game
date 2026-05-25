@@ -141,17 +141,17 @@ export const HUD: React.FC<HUDProps> = ({ uiState }) => {
                 </span>
               </div>
             </motion.div>
-          ) : uiState.wind !== 0 && (
+          ) : Math.abs(uiState.wind) > 0.15 && (
             <motion.div 
-              key={uiState.wind}
+              key={uiState.wind > 0 ? 'east' : 'west'}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               className="flex items-center gap-2 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/10 pointer-events-none"
             >
-              <Wind className={`w-5 h-5 text-sky-300 ${uiState.wind === -1 ? 'rotate-180' : ''}`} />
+              <Wind className={`w-5 h-5 text-sky-300 ${uiState.wind < 0 ? 'rotate-180' : ''}`} />
               <span className="text-xs font-bold text-white/80">
-                {uiState.wind === 1 ? 'East Breeze' : 'West Breeze'}
+                {uiState.wind > 0 ? 'East Breeze' : 'West Breeze'}
               </span>
             </motion.div>
           )}
