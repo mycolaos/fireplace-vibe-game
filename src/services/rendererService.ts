@@ -91,13 +91,14 @@ export const drawMoon = (ctx: CanvasRenderingContext2D, width: number, height: n
   ctx.restore();
 };
 
-export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: number, horizonY: number, time: number, cycle: number) => {
+export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: number, horizonY: number, time: number, cycle: number, starsAlphaMod: number = 1.0) => {
   // Stars visible at night
   let alphaMult = 0;
   if (cycle > 0.1 && cycle < 0.9) {
     alphaMult = Math.sin((cycle - 0.1) / 0.8 * Math.PI);
   }
   if (alphaMult <= 0) return;
+  if (starsAlphaMod <= 0.01) return;
 
   ctx.fillStyle = 'white';
   stars.forEach(s => {
@@ -113,7 +114,7 @@ export const drawStars = (ctx: CanvasRenderingContext2D, stars: Star[], width: n
     
     if (starAlpha > 0) {
       const twinkle = Math.sin(time * 0.002 + s.phase) * 0.5 + 0.5;
-      ctx.globalAlpha = (0.3 + twinkle * 0.7) * starAlpha;
+      ctx.globalAlpha = (0.3 + twinkle * 0.7) * starAlpha * starsAlphaMod;
       ctx.beginPath();
       ctx.arc(s.x * width, s.y * horizonY * 0.9, s.size, 0, Math.PI * 2);
       ctx.fill();
@@ -493,43 +494,49 @@ export const drawGlow = (ctx: CanvasRenderingContext2D, centerX: number, centerY
   ctx.globalCompositeOperation = 'source-over';
 };
 
-export const drawWeatherOverlay = (ctx: CanvasRenderingContext2D, weather: string, width: number, height: number) => {
-  if (weather === 'CLEAR') return;
-
+export const drawWeatherOverlay = (ctx: CanvasRenderingContext2D, weatherWeights: Record<string, number>, width: number, height: number) => {
   ctx.save();
-  if (weather === 'WINDY') {
-    // Subtle horizontal streaks or dust
-    ctx.fillStyle = 'rgba(200, 200, 200, 0.05)';
-    for (let i = 0; i < 5; i++) {
+  
+  // Windy overlay
+  const windyWeight = weatherWeights.WINDY || 0;
+  if (windyWeight > 0.01) {
+    ctx.fillStyle = `rgba(200, 200, 200, ${0.05 * windyWeight})`;
+    const numStreaks = Math.round(5 * windyWeight);
+    for (let i = 0; i < numStreaks; i++) {
         ctx.fillRect(0, Math.random() * height, width, 2);
     }
-  } else if (weather === 'RAINY') {
-    // Gloomy blueish overlay
+  }
+
+  // Rainy overlay
+  const rainyWeight = weatherWeights.RAINY || 0;
+  if (rainyWeight > 0.01) {
     const gloom = ctx.createLinearGradient(0, 0, 0, height);
-    gloom.addColorStop(0, 'rgba(30, 40, 80, 0.2)');
-    gloom.addColorStop(1, 'rgba(10, 15, 30, 0.4)');
+    gloom.addColorStop(0, `rgba(30, 40, 80, ${0.2 * rainyWeight})`);
+    gloom.addColorStop(1, `rgba(10, 15, 30, ${0.4 * rainyWeight})`);
     ctx.fillStyle = gloom;
     ctx.fillRect(0, 0, width, height);
 
-    // Fog at horizon
     const fog = ctx.createLinearGradient(0, height * 0.4, 0, height * 0.6);
     fog.addColorStop(0, 'rgba(0,0,0,0)');
-    fog.addColorStop(0.5, 'rgba(100, 110, 140, 0.2)');
+    fog.addColorStop(0.5, `rgba(100, 110, 140, ${0.2 * rainyWeight})`);
     fog.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = fog;
     ctx.fillRect(0, height * 0.4, width, height * 0.2);
-  } else if (weather === 'SNOWY') {
-    // Colder, whiteish overlay
-    ctx.fillStyle = 'rgba(200, 230, 255, 0.1)';
+  }
+
+  // Snowy overlay
+  const snowyWeight = weatherWeights.SNOWY || 0;
+  if (snowyWeight > 0.01) {
+    ctx.fillStyle = `rgba(200, 230, 255, ${0.1 * snowyWeight})`;
     ctx.fillRect(0, 0, width, height);
 
-    // Thick fog 
     const snowFog = ctx.createRadialGradient(width/2, height*0.6, 0, width/2, height*0.6, width);
-    snowFog.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
-    snowFog.addColorStop(1, 'rgba(200, 220, 255, 0.2)');
+    snowFog.addColorStop(0, `rgba(255, 255, 255, ${0.05 * snowyWeight})`);
+    snowFog.addColorStop(1, `rgba(200, 220, 255, ${0.2 * snowyWeight})`);
     ctx.fillStyle = snowFog;
     ctx.fillRect(0, 0, width, height);
   }
+
   ctx.restore();
 };
 

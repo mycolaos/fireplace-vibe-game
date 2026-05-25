@@ -60,6 +60,8 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
       const dt = (time - state.current.lastTick) / 1000;
       state.current.lastTick = time;
 
+      const wWeights = state.current.weatherWeights;
+
       // Initialize Game Elements if not done (triggers on start and after restart)
       if (state.current.stars.length === 0) {
         for (let i = 0; i < 150; i++) {
@@ -180,9 +182,25 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         const totalTime = (time - state.current.startTime) / 1000;
         state.current.score = Math.floor(totalTime);
         
-        // Intensity decay gets faster as time goes on (difficulty scaling)
-        const weatherMod = WEATHER_CONFIG[state.current.weather].fuelDecay;
-        state.current.decayRate = (INTENSITY_DECAY_BASE + Math.floor(totalTime / 10) * DIFFICULTY_INCREMENT) * weatherMod;
+        // Smoothly transition weather weights
+        const weathers: WeatherType[] = ['CLEAR', 'WINDY', 'RAINY', 'SNOWY'];
+        const transitionSpeed = 0.6; // Transition speed factor over ~3-4 seconds
+        
+        weathers.forEach(w => {
+          const targetWeight = w === state.current.weather ? 1.0 : 0.0;
+          const currentWeight = wWeights[w] ?? 0.0;
+          wWeights[w] += (targetWeight - currentWeight) * transitionSpeed * dt;
+          if (wWeights[w] < 0.001) wWeights[w] = 0;
+          if (wWeights[w] > 0.999) wWeights[w] = 1;
+        });
+
+        // Intensity decay gets faster as time goes on (difficulty scaling), blended across active weather types
+        const clearDecay = WEATHER_CONFIG['CLEAR'].fuelDecay;
+        const windyDecay = WEATHER_CONFIG['WINDY'].fuelDecay;
+        const rainyDecay = WEATHER_CONFIG['RAINY'].fuelDecay;
+        const snowyDecay = WEATHER_CONFIG['SNOWY'].fuelDecay;
+        const blendedWeatherDecay = (wWeights.CLEAR * clearDecay) + (wWeights.WINDY * windyDecay) + (wWeights.RAINY * rainyDecay) + (wWeights.SNOWY * snowyDecay);
+        state.current.decayRate = (INTENSITY_DECAY_BASE + Math.floor(totalTime / 10) * DIFFICULTY_INCREMENT) * blendedWeatherDecay;
 
         // --- 1.5 DAY CYCLE UPDATE ---
         const cycleDurationSeconds = DAY_CYCLE_DURATION / 1000;
@@ -190,10 +208,10 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
 
         // --- 2. WEATHER SYSTEM ---
         if (time > state.current.nextWeatherTime) {
-          const weathers: WeatherType[] = ['CLEAR', 'WINDY', 'RAINY', 'SNOWY'];
+          const nextWeathers: WeatherType[] = ['CLEAR', 'WINDY', 'RAINY', 'SNOWY'];
           let nextWeather: WeatherType;
           do {
-            nextWeather = weathers[Math.floor(Math.random() * weathers.length)];
+            nextWeather = nextWeathers[Math.floor(Math.random() * nextWeathers.length)];
           } while (nextWeather === state.current.weather);
           
           state.current.weather = nextWeather;
@@ -202,9 +220,9 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
           state.current.nextWeatherTime = time + randomDuration;
         }
 
-        // Smoothly transition cloud density and alpha based on weather
-        const targetCloudDensity = (WEATHER_CONFIG[state.current.weather] as any).clouds;
-        const targetCloudAlpha = (WEATHER_CONFIG[state.current.weather] as any).cloudLikelihood;
+        // Smoothly transition cloud density and alpha based on weather weights
+        const targetCloudDensity = (wWeights.CLEAR * WEATHER_CONFIG['CLEAR'].clouds) + (wWeights.WINDY * WEATHER_CONFIG['WINDY'].clouds) + (wWeights.RAINY * WEATHER_CONFIG['RAINY'].clouds) + (wWeights.SNOWY * WEATHER_CONFIG['SNOWY'].clouds);
+        const targetCloudAlpha = (wWeights.CLEAR * WEATHER_CONFIG['CLEAR'].cloudLikelihood) + (wWeights.WINDY * WEATHER_CONFIG['WINDY'].cloudLikelihood) + (wWeights.RAINY * WEATHER_CONFIG['RAINY'].cloudLikelihood) + (wWeights.SNOWY * WEATHER_CONFIG['SNOWY'].cloudLikelihood);
         state.current.cloudDensity += (targetCloudDensity - state.current.cloudDensity) * 0.5 * dt;
         state.current.cloudAlpha += (targetCloudAlpha - state.current.cloudAlpha) * 0.5 * dt;
 
@@ -271,7 +289,11 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
         state.current.oxygen = Math.max(0, Math.min(100, state.current.oxygen));
 
       // Interaction between Oxygen and Intensity
-      const stabilityMod = WEATHER_CONFIG[state.current.weather].tempStability;
+      const clearStab = WEATHER_CONFIG['CLEAR'].tempStability;
+      const windyStab = WEATHER_CONFIG['WINDY'].tempStability;
+      const rainyStab = WEATHER_CONFIG['RAINY'].tempStability;
+      const snowyStab = WEATHER_CONFIG['SNOWY'].tempStability;
+      const stabilityMod = (wWeights.CLEAR * clearStab) + (wWeights.WINDY * windyStab) + (wWeights.RAINY * rainyStab) + (wWeights.SNOWY * snowyStab);
       if (state.current.oxygen < 30) state.current.intensity -= (2.0 / stabilityMod) * dt; // Choking
       else if (state.current.oxygen > 60) state.current.intensity += 0.3 * stabilityMod * dt; // Thriving
 
@@ -404,9 +426,11 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
       renderer.drawClouds(ctx, state.current.clouds, canvas.width, time, state.current.cloudDensity, state.current.cloudAlpha);
       renderer.drawGround(ctx, canvas.width, canvas.height, horizonY, state.current.cycleProgress);
       renderer.drawMoon(ctx, canvas.width, canvas.height, state.current.cycleProgress);
-      if (state.current.weather === 'CLEAR' || state.current.weather === 'WINDY') {
-        renderer.drawStars(ctx, state.current.stars, canvas.width, horizonY, time, state.current.cycleProgress);
-      }
+      
+      // Smoothly fade stars based on weather transition weight
+      const starsAlphaMod = wWeights.CLEAR + wWeights.WINDY * 0.7;
+      renderer.drawStars(ctx, state.current.stars, canvas.width, horizonY, time, state.current.cycleProgress, starsAlphaMod);
+      
       renderer.drawComet(ctx, state.current.comet);
       renderer.drawMountains(ctx, state.current.mountains, canvas.width, horizonY);
       renderer.drawDunes(ctx, canvas.width, horizonY);
@@ -417,7 +441,7 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
       renderer.drawWolf(ctx, state.current.wolf, canvas.width, horizonY, time);
       renderer.drawGrass(ctx, state.current.grass, canvas.width, horizonY, time);
       
-      renderer.drawWeatherOverlay(ctx, state.current.weather, canvas.width, canvas.height);
+      renderer.drawWeatherOverlay(ctx, wWeights, canvas.width, canvas.height);
 
       // Fire Glow (Ground and Air illumination)
       renderer.drawGlow(ctx, centerX, centerY, state.current.intensity, canvas.width, canvas.height);
@@ -460,14 +484,17 @@ export const FireplaceCanvas: React.FC<FireplaceCanvasProps> = ({
           }
         }
 
-        // Spawn Weather Particles
-        if (state.current.weather === 'RAINY') {
-          for (let i = 0; i < 5; i++) {
+        // Spawn Weather Particles based on transition weights
+        if (wWeights.RAINY > 0.01) {
+          const rainCountFloat = 5 * wWeights.RAINY;
+          const rainCount = Math.floor(rainCountFloat) + (Math.random() < (rainCountFloat % 1) ? 1 : 0);
+          for (let i = 0; i < rainCount; i++) {
             state.current.particles.push(spawnParticle('rain', Math.random() * canvas.width, -10, state.current.wind, state.current.intensity));
           }
-        } else if (state.current.weather === 'SNOWY') {
-          if (Math.random() > 0.6) {
-             state.current.particles.push(spawnParticle('snow', Math.random() * canvas.width, -10, state.current.wind, state.current.intensity));
+        }
+        if (wWeights.SNOWY > 0.01) {
+          if (Math.random() < 0.4 * wWeights.SNOWY) {
+            state.current.particles.push(spawnParticle('snow', Math.random() * canvas.width, -10, state.current.wind, state.current.intensity));
           }
         }
       }
